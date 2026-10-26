@@ -1,0 +1,271 @@
+// This is your Prisma schema file for Ceramix 3D
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlateFinish {
+  GLOSSY  @map("glossy")
+  MATTE   @map("matte")
+  SATIN   @map("satin")
+
+  @@map("plate_finish_enum")
+}
+
+enum RimTrim {
+  NONE       @map("none")
+  GOLD       @map("gold")
+  SILVER     @map("silver")
+  ROSE_GOLD  @map("rose_gold")
+  CUSTOM     @map("custom")
+
+  @@map("rim_trim_enum")
+}
+
+enum PrintCoverage {
+  CENTER  @map("center")
+  FULL    @map("full")
+
+  @@map("print_coverage_enum")
+}
+
+enum PaymentMethod {
+  BCA     @map("bca")
+  MANDIRI @map("mandiri")
+  QRIS    @map("qris")
+  GOPAY   @map("gopay")
+
+  @@map("payment_method_enum")
+}
+
+enum PaymentStatus {
+  UNPAID   @map("unpaid")
+  PAID     @map("paid")
+  FAILED   @map("failed")
+  REFUNDED @map("refunded")
+
+  @@map("payment_status_enum")
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT  @map("pending_payment")
+  DESIGN_REVIEW    @map("design_review")
+  IN_PRODUCTION    @map("in_production")
+  QUALITY_CHECK    @map("quality_check")
+  SHIPPED          @map("shipped")
+  DELIVERED        @map("delivered")
+  CANCELLED        @map("cancelled")
+
+  @@map("order_status_enum")
+}
+
+enum UserRole {
+  CUSTOMER  @map("customer")
+  ADMIN     @map("admin")
+  ARTISAN   @map("artisan")
+
+  @@map("user_role_enum")
+}
+
+model User {
+  id             String                @id @default(uuid()) @db.Uuid
+  email          String                @unique @db.VarChar(255)
+  passwordHash   String?               @map("password_hash") @db.VarChar(255) // Untuk auth Admin Dashboard & Customer
+  fullName       String                @map("full_name") @db.VarChar(150)
+  phone          String?               @db.VarChar(30)
+  avatarUrl      String?               @map("avatar_url") @db.Text
+  role           UserRole              @default(CUSTOMER) // CUSTOMER | ADMIN | ARTISAN
+  isActive       Boolean               @default(true) @map("is_active")
+  lastLoginAt    DateTime?             @map("last_login_at") @db.Timestamptz
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+  
+  customizations PlateCustomization[]
+  orders         Order[]
+  productionLogs OrderProductionLog[]
+
+  @@map("users")
+}
+
+model PlateSize {
+  id             String                @id @db.VarChar(50) // 'dinner', 'salad', 'dessert'
+  name           String                @db.VarChar(100)
+  diameterCm     Decimal               @map("diameter_cm") @db.Decimal(5, 2)
+  basePrice      Decimal               @map("base_price") @db.Decimal(12, 2)
+  isActive       Boolean               @default(true) @map("is_active")
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz
+
+  customizations PlateCustomization[]
+
+  @@map("plate_sizes")
+}
+
+model PlateColor {
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  hexCode     String   @map("hex_code") @db.VarChar(10)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("plate_colors")
+}
+
+model DesignPreset {
+  id              String   @id @db.VarChar(50)
+  name            String   @db.VarChar(150)
+  category        String   @db.VarChar(100)
+  thumbnailSvgUrl String?  @map("thumbnail_svg_url") @db.Text
+  dataUrl         String   @map("data_url") @db.Text
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("design_presets")
+}
+
+model PlateCustomization {
+  id                  String        @id @default(uuid()) @db.Uuid
+  userId              String?       @map("user_id") @db.Uuid
+  plateSizeId         String        @map("plate_size_id") @db.VarChar(50)
+  
+  // Ceramic Glaze & Rim Specs
+  plateColorHex       String        @map("plate_color_hex") @db.VarChar(10)
+  plateFinish         PlateFinish   @default(GLOSSY) @map("plate_finish")
+  rimTrim             RimTrim       @default(NONE) @map("rim_trim")
+  rimTrimCustomColor  String?       @map("rim_trim_custom_color") @db.VarChar(10)
+  printCoverage       PrintCoverage @default(CENTER) @map("print_coverage")
+
+  // 3D Transform Coordinates
+  designImageUrl      String?       @map("design_image_url") @db.Text
+  designName          String?       @map("design_name") @db.VarChar(200)
+  designScale         Decimal       @default(1.00) @map("design_scale") @db.Decimal(5, 2)
+  designRotation      Decimal       @default(0.0) @map("design_rotation") @db.Decimal(5, 1)
+  designOffsetX       Decimal       @default(0.000) @map("design_offset_x") @db.Decimal(6, 3)
+  designOffsetY       Decimal       @default(0.000) @map("design_offset_y") @db.Decimal(6, 3)
+  designOpacity       Decimal       @default(1.00) @map("design_opacity") @db.Decimal(4, 2)
+
+  previewSnapshotUrl  String?       @map("preview_snapshot_url") @db.Text
+  metadata            Json?         @default("{}") @db.JsonB
+  
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  user                User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  plateSize           PlateSize     @relation(fields: [plateSizeId], references: [id])
+  orderItems          OrderItem[]
+
+  @@map("plate_customizations")
+}
+
+model Order {
+  id                 String               @id @default(uuid()) @db.Uuid
+  orderNumber        String               @unique @map("order_number") @db.VarChar(50)
+  userId             String?              @map("user_id") @db.Uuid
+
+  // Customer & Shipping Information
+  customerName       String               @map("customer_name") @db.VarChar(150)
+  customerEmail      String               @map("customer_email") @db.VarChar(255)
+  customerPhone      String               @map("customer_phone") @db.VarChar(30)
+  shippingAddress    String               @map("shipping_address") @db.Text
+  city               String               @db.VarChar(100)
+  postalCode         String               @map("postal_code") @db.VarChar(15)
+  specialNotes       String?              @map("special_notes") @db.Text
+
+  // Financial Breakdown
+  totalBasePrice     Decimal              @map("total_base_price") @db.Decimal(14, 2)
+  totalPrintFee      Decimal              @default(0) @map("total_print_fee") @db.Decimal(14, 2)
+  totalRimTrimFee    Decimal              @default(0) @map("total_rim_trim_fee") @db.Decimal(14, 2)
+  shippingCost       Decimal              @default(0) @map("shipping_cost") @db.Decimal(14, 2)
+  discountAmount     Decimal              @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  grandTotal         Decimal              @map("grand_total") @db.Decimal(14, 2)
+
+  // Status & Transaction
+  paymentMethod      PaymentMethod        @map("payment_method")
+  paymentStatus      PaymentStatus        @default(UNPAID) @map("payment_status")
+  orderStatus        OrderStatus          @default(PENDING_PAYMENT) @map("order_status")
+  
+  paymentProofUrl    String?              @map("payment_proof_url") @db.Text
+  paymentReferenceId String?              @map("payment_reference_id") @db.VarChar(150)
+  trackingNumber     String?              @map("tracking_number") @db.VarChar(100)
+
+  paidAt             DateTime?            @map("paid_at") @db.Timestamptz
+  shippedAt          DateTime?            @map("shipped_at") @db.Timestamptz
+  deliveredAt        DateTime?            @map("delivered_at") @db.Timestamptz
+  createdAt          DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  user               User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items              OrderItem[]
+  logs               OrderProductionLog[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                 String              @id @default(uuid()) @db.Uuid
+  orderId            String              @map("order_id") @db.Uuid
+  customizationId    String?             @map("customization_id") @db.Uuid
+
+  // Immutable Order Snapshot
+  plateSizeName      String              @map("plate_size_name") @db.VarChar(100)
+  diameterCm         Decimal             @map("diameter_cm") @db.Decimal(5, 2)
+  plateColorName     String              @map("plate_color_name") @db.VarChar(100)
+  plateColorHex      String              @map("plate_color_hex") @db.VarChar(10)
+  plateFinish        PlateFinish         @map("plate_finish")
+  rimTrimName        String              @map("rim_trim_name") @db.VarChar(100)
+  rimTrimCustomHex   String?             @map("rim_trim_custom_hex") @db.VarChar(10)
+  printCoverage      PrintCoverage       @map("print_coverage")
+
+  designImageUrl     String?             @map("design_image_url") @db.Text
+  snapshotRenderUrl  String              @map("snapshot_render_url") @db.Text
+
+  unitBasePrice      Decimal             @map("unit_base_price") @db.Decimal(12, 2)
+  unitPrintFee       Decimal             @default(0) @map("unit_print_fee") @db.Decimal(12, 2)
+  unitRimTrimFee     Decimal             @default(0) @map("unit_rim_trim_fee") @db.Decimal(12, 2)
+  unitTotalPrice     Decimal             @map("unit_total_price") @db.Decimal(12, 2)
+
+  quantity           Int                 @default(1)
+  subtotalPrice      Decimal             @map("subtotal_price") @db.Decimal(14, 2)
+
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  order              Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customization      PlateCustomization? @relation(fields: [customizationId], references: [id], onDelete: SetNull)
+
+  @@map("order_items")
+}
+
+model OrderProductionLog {
+  id           String      @id @default(uuid()) @db.Uuid
+  orderId      String      @map("order_id") @db.Uuid
+  operatorId   String?     @map("operator_id") @db.Uuid // Admin atau Artisan yang mengupdate status/QC
+  stage        OrderStatus
+  title        String      @db.VarChar(150)
+  description  String?     @db.Text
+  operatorName String?     @map("operator_name") @db.VarChar(100)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  order        Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  operator     User?       @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+
+  @@map("order_production_logs")
+}
+
+model SiteSetting {
+  key         String   @id @db.VarChar(100)
+  section     String   @db.VarChar(50) // 'hero', 'promo', 'faq', 'contact'
+  title       String?  @db.VarChar(255)
+  content     String?  @db.Text
+  metadata    Json?    @default("{}") @db.JsonB
+  isActive    Boolean  @default(true) @map("is_active")
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("site_settings")
+}
+
