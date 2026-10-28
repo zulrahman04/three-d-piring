@@ -21,6 +21,7 @@ import {
 import confetti from 'canvas-confetti';
 import { usePlateStore } from '@/store/usePlateStore';
 import { CustomerOrderData } from '@/types/plate';
+import { RIM_PATTERNS } from '@/constants/presets';
 
 export default function OrderModal() {
   const {
@@ -35,6 +36,12 @@ export default function OrderModal() {
     plateFinish,
     rimTrim,
     rimTrimCustomColor,
+    rimPattern,
+    customRimPatternUrl,
+    customRimPatternName,
+    customRimPatternRepeat,
+    customRimPatternMode,
+    logoPlacement,
     printCoverage,
     designUrl,
     designName,
@@ -88,10 +95,24 @@ export default function OrderModal() {
       },
       customization: {
         plateSize: selectedSize.id,
+        plateSizeName: selectedSize.name,
+        diameterCm: selectedSize.diameterCm,
+        outerRadius: selectedSize.outerRadius,
+        wellRatio: selectedSize.wellRatio,
+        wellDepth: selectedSize.wellDepth,
+        rimHeight: selectedSize.rimHeight,
+        rimAngleDeg: selectedSize.rimAngleDeg,
+        thickness: selectedSize.thickness,
+        footRingRadiusRatio: selectedSize.footRingRadiusRatio,
         plateColor: plateColor,
         finish: plateFinish,
         rimTrim: rimTrim,
         rimTrimCustomColor: rimTrimCustomColor,
+        rimPattern: rimPattern,
+        customRimPatternUrl: customRimPatternUrl || null,
+        customRimPatternName: customRimPatternName || null,
+        customRimPatternRepeat: customRimPatternRepeat,
+        customRimPatternMode: customRimPatternMode,
         printCoverage: printCoverage,
         designImageUrl: designUrl || null,
         designName: designName || 'Custom Artwork',
@@ -328,12 +349,36 @@ export default function OrderModal() {
                       </span>
                     )}
                   </div>
+                  {rimPattern && rimPattern !== 'none' && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Motif Lis Bibir:</span>
+                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">
+                        {rimPattern === 'custom'
+                          ? customRimPatternName
+                            ? `${customRimPatternName} (${customRimPatternMode === 'repeat' ? `${customRimPatternRepeat}x` : 'Cincin'})`
+                            : 'Motif Kustom Pelanggan'
+                          : RIM_PATTERNS.find((p) => p.id === rimPattern)?.name || rimPattern}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-zinc-500">Motif Cetak:</span>
                     <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">
                       {designName || 'Kustom Pelanggan'}
                     </span>
                   </div>
+                  {designUrl && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Posisi Logo:</span>
+                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 capitalize">
+                        {logoPlacement === 'top-rim'
+                          ? 'Bibir Jam 12'
+                          : logoPlacement === 'center'
+                          ? 'Di Tengah'
+                          : 'Bebas'}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Quantity Controls & Total Calculation */}
@@ -378,6 +423,12 @@ export default function OrderModal() {
                       <div className="flex justify-between text-zinc-500">
                         <span>Aksen Rim Metalik:</span>
                         <span>Rp {(pricing.rimTrimFee * orderQuantity).toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    {pricing.rimPatternFee && pricing.rimPatternFee > 0 && (
+                      <div className="flex justify-between text-zinc-500">
+                        <span>Motif Lis Bibir:</span>
+                        <span>Rp {(pricing.rimPatternFee * orderQuantity).toLocaleString('id-ID')}</span>
                       </div>
                     )}
                     <div className="flex justify-between items-baseline font-bold text-sm text-zinc-900 dark:text-white pt-2 border-t border-indigo-200/70 dark:border-indigo-900/70">

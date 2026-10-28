@@ -1,5 +1,5 @@
 import { PrismaClient, UserRole } from '@prisma/client';
-import { DESIGN_PRESETS } from '../constants/presets';
+import { DESIGN_PRESETS, PLATE_SIZES } from '../constants/presets';
 import { hashPassword } from '../lib/auth';
 
 const prisma = new PrismaClient();
@@ -104,7 +104,40 @@ async function main() {
       metadata: { kilnStatus: 'ONLINE', capacityPercent: 68 },
     },
   });
-  console.log('  ✓ Site Settings (Hero, Promo, Studio Announcement)');
+  // 5. Seed Master Plate Sizes with 3D Geometric Specifications (Flat Master)
+  for (const s of PLATE_SIZES) {
+    await prisma.plateSize.upsert({
+      where: { id: s.id },
+      update: {
+        name: s.name,
+        diameterCm: s.diameterCm,
+        basePrice: s.basePrice,
+        outerRadius: s.outerRadius,
+        wellRatio: s.wellRatio,
+        wellDepth: s.wellDepth,
+        rimHeight: s.rimHeight,
+        rimAngleDeg: s.rimAngleDeg,
+        thickness: s.thickness,
+        footRingRadiusRatio: s.footRingRadiusRatio,
+        isActive: true,
+      },
+      create: {
+        id: s.id,
+        name: s.name,
+        diameterCm: s.diameterCm,
+        basePrice: s.basePrice,
+        outerRadius: s.outerRadius,
+        wellRatio: s.wellRatio,
+        wellDepth: s.wellDepth,
+        rimHeight: s.rimHeight,
+        rimAngleDeg: s.rimAngleDeg,
+        thickness: s.thickness,
+        footRingRadiusRatio: s.footRingRadiusRatio,
+        isActive: true,
+      },
+    });
+    console.log(`  ✓ Plate Size (with 3D Geometry): ${s.name} (${s.diameterCm} cm)`);
+  }
 
   console.log('✅ Seeding completed successfully!');
 }

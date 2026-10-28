@@ -1,10 +1,18 @@
 export type PlateFinish = 'glossy' | 'matte' | 'satin';
 
 export type PlateSize = {
-  id: 'dinner' | 'salad' | 'dessert';
+  id: string;
   name: string;
   diameterCm: number;
   basePrice: number;
+  outerRadius: number; // Radius total dalam unit 3D (dihitung otomatis: diameterCm / 20)
+  wellRatio: number; // Rasio lebar cekungan tengah terhadap diameter total (misal: 0.64)
+  wellDepth: number; // Kedalaman cekungan tengah dalam unit 3D (misal: 0.11)
+  thickness: number; // Ketebalan bodi keramik konstan (misal: 0.038)
+  footRingRadiusRatio: number; // Rasio posisi cincin kaki bawah dari outerRadius (misal: 0.56)
+  rimHeight?: number;
+  rimAngleDeg?: number;
+  isActive?: boolean;
 };
 
 export type PlateColor = {
@@ -16,6 +24,20 @@ export type PlateColor = {
 
 export type RimTrim = 'none' | 'gold' | 'silver' | 'rose-gold' | 'custom';
 
+export type RimPattern =
+  | 'none'
+  | 'gold-double'
+  | 'gold-single'
+  | 'silver-double'
+  | 'black-modern'
+  | 'batik-kawung'
+  | 'batik-megamendung'
+  | 'greek-key'
+  | 'pearl-dots'
+  | 'custom';
+
+export type LogoPlacement = 'center' | 'top-rim' | 'free';
+
 export type DesignPreset = {
   id: string;
   name: string;
@@ -25,17 +47,24 @@ export type DesignPreset = {
 };
 
 export interface PlateCustomizationState {
-  // Plate Appearance
+  // Plate Appearance & Geometry (Flat Master via selectedSize)
+  availableSizes: PlateSize[];
   selectedSize: PlateSize;
   plateColor: string;
   plateFinish: PlateFinish;
   rimTrim: RimTrim;
   rimTrimCustomColor: string;
+  rimPattern: RimPattern;
+  customRimPatternUrl: string | null;
+  customRimPatternName: string | null;
+  customRimPatternRepeat: number; // 8 to 64
+  customRimPatternMode: 'repeat' | 'full';
   printCoverage: 'center' | 'full';
 
-  // Custom Artwork / Texture
+  // Custom Artwork / Texture & Logo Placement
   designUrl: string | null;
   designName: string | null;
+  logoPlacement: LogoPlacement;
   designScale: number; // 0.2 to 2.0
   designRotation: number; // 0 to 360 degrees
   designOffsetX: number; // -0.5 to 0.5
@@ -54,10 +83,18 @@ export interface PlateCustomizationState {
 
   // Actions
   setSize: (size: PlateSize) => void;
+  setAvailableSizes: (sizes: PlateSize[]) => void;
+  loadMasterSizes: () => Promise<void>;
   setPlateColor: (color: string) => void;
   setPlateFinish: (finish: PlateFinish) => void;
   setRimTrim: (rim: RimTrim) => void;
   setRimTrimCustomColor: (color: string) => void;
+  setRimPattern: (pattern: RimPattern) => void;
+  setCustomRimPatternUrl: (url: string | null, name?: string) => void;
+  setCustomRimPatternRepeat: (repeat: number) => void;
+  setCustomRimPatternMode: (mode: 'repeat' | 'full') => void;
+  clearCustomRimPattern: () => void;
+  setLogoPlacement: (placement: LogoPlacement) => void;
   setPrintCoverage: (coverage: 'center' | 'full') => void;
   setDesignImage: (url: string | null, name?: string) => void;
   setDesignScale: (scale: number) => void;
@@ -77,6 +114,7 @@ export interface PlateCustomizationState {
     unitBasePrice: number;
     printFee: number;
     rimTrimFee: number;
+    rimPatternFee?: number;
     unitTotal: number;
     quantity: number;
     grandTotal: number;

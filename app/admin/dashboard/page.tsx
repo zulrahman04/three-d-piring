@@ -19,6 +19,7 @@ import {
   Phone,
   Mail,
   MapPin,
+  User,
   X,
   Shield,
   Palette,
@@ -29,6 +30,8 @@ import {
 import StudioMasterManager from '@/components/admin/StudioMasterManager';
 import LandingMasterManager from '@/components/admin/LandingMasterManager';
 import PlatePreview from '@/components/admin/PlatePreview';
+import DesignReviewModal from '@/components/admin/DesignReviewModal';
+import CustomerDetailModal from '@/components/admin/CustomerDetailModal';
 
 interface OrderItem {
   id: string;
@@ -38,6 +41,7 @@ interface OrderItem {
   plateColorHex: string;
   plateFinish: string;
   rimTrimName: string;
+  rimTrimCustomHex?: string | null;
   printCoverage: string;
   designImageUrl: string | null;
   snapshotRenderUrl: string;
@@ -85,6 +89,7 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedCustomerOrder, setSelectedCustomerOrder] = useState<Order | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusNote, setStatusNote] = useState('');
 
@@ -434,30 +439,94 @@ export default function AdminDashboardPage() {
                         </td>
 
                         <td className="px-5 py-4">
-                          <div className="font-medium text-white">{order.customerName}</div>
-                          <div className="text-[11px] text-zinc-400">{order.customerPhone}</div>
-                          <div className="text-[11px] text-zinc-400">{order.city}</div>
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCustomerOrder(order)}
+                                className="font-bold text-white text-sm hover:text-amber-400 transition-colors text-left flex items-center gap-1.5 cursor-pointer group"
+                                title="Klik untuk melihat detail lengkap pelanggan & alamat pengiriman"
+                              >
+                                <span>{order.customerName}</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-400 border border-blue-500/25 group-hover:bg-amber-400/20 group-hover:text-amber-300 group-hover:border-amber-400/30 transition-colors">
+                                  Detail
+                                </span>
+                              </button>
+                            </div>
+
+                            {order.customerPhone && (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
+                                <a
+                                  href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '').startsWith('0') ? '62' + order.customerPhone.replace(/[^0-9]/g, '').slice(1) : order.customerPhone.replace(/[^0-9]/g, '')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-zinc-300 hover:text-emerald-400 font-mono transition-colors"
+                                  title="Chat WhatsApp langsung"
+                                >
+                                  {order.customerPhone}
+                                </a>
+                              </div>
+                            )}
+
+                            {order.customerEmail && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                                <Mail className="w-3 h-3 text-blue-400 shrink-0" />
+                                <span className="truncate max-w-[170px]" title={order.customerEmail}>
+                                  {order.customerEmail}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                              <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span
+                                className="truncate max-w-[170px]"
+                                title={`${order.shippingAddress ? order.shippingAddress + ', ' : ''}${order.city} ${order.postalCode || ''}`}
+                              >
+                                {order.city} {order.postalCode ? `(${order.postalCode})` : ''}
+                              </span>
+                            </div>
+
+                            {order.specialNotes && (
+                              <div
+                                className="mt-0.5 text-[10px] text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-md truncate max-w-[180px]"
+                                title={order.specialNotes}
+                              >
+                                Catatan: {order.specialNotes}
+                              </div>
+                            )}
+                          </div>
                         </td>
 
                         <td className="px-5 py-4">
                           {firstItem ? (
                             <div className="flex items-center gap-3">
-                              <PlatePreview
-                                size="sm"
-                                plateColorHex={firstItem.plateColorHex}
-                                plateFinish={firstItem.plateFinish}
-                                rimTrimName={firstItem.rimTrimName}
-                                rimTrimCustomHex={firstItem.rimTrimCustomHex}
-                                printCoverage={firstItem.printCoverage}
-                                designImageUrl={firstItem.designImageUrl || firstItem.customization?.designImageUrl}
-                                snapshotRenderUrl={firstItem.snapshotRenderUrl || firstItem.customization?.previewSnapshotUrl}
-                                designScale={firstItem.customization?.designScale ? Number(firstItem.customization.designScale) : 1}
-                                designRotation={firstItem.customization?.designRotation ? Number(firstItem.customization.designRotation) : 0}
-                                designOffsetX={firstItem.customization?.designOffsetX ? Number(firstItem.customization.designOffsetX) : 0}
-                                designOffsetY={firstItem.customization?.designOffsetY ? Number(firstItem.customization.designOffsetY) : 0}
-                                designOpacity={firstItem.customization?.designOpacity ? Number(firstItem.customization.designOpacity) : 1}
-                                diameterCm={firstItem.diameterCm}
-                              />
+                              {(() => {
+                                const meta = firstItem.customization?.metadata || {};
+                                return (
+                                  <PlatePreview
+                                    size="sm"
+                                    plateColorHex={firstItem.plateColorHex}
+                                    plateFinish={firstItem.plateFinish}
+                                    rimTrimName={firstItem.rimTrimName}
+                                    rimTrimCustomHex={firstItem.rimTrimCustomHex}
+                                    rimPattern={meta.rimPattern || (firstItem.rimTrimName === 'custom' ? 'custom' : 'none')}
+                                    customRimPatternUrl={meta.customRimPatternUrl}
+                                    customRimPatternRepeat={meta.customRimPatternRepeat}
+                                    customRimPatternMode={meta.customRimPatternMode}
+                                    printCoverage={firstItem.printCoverage}
+                                    designImageUrl={firstItem.designImageUrl || firstItem.customization?.designImageUrl}
+                                    snapshotRenderUrl={firstItem.snapshotRenderUrl || firstItem.customization?.previewSnapshotUrl}
+                                    designScale={firstItem.customization?.designScale ? Number(firstItem.customization.designScale) : 1}
+                                    designRotation={firstItem.customization?.designRotation ? Number(firstItem.customization.designRotation) : 0}
+                                    designOffsetX={firstItem.customization?.designOffsetX ? Number(firstItem.customization.designOffsetX) : 0}
+                                    designOffsetY={firstItem.customization?.designOffsetY ? Number(firstItem.customization.designOffsetY) : 0}
+                                    designOpacity={firstItem.customization?.designOpacity ? Number(firstItem.customization.designOpacity) : 1}
+                                    diameterCm={firstItem.diameterCm}
+                                  />
+                                );
+                              })()}
                               <div>
                                 <div className="font-medium text-zinc-200">
                                   {firstItem.plateSizeName} ({firstItem.diameterCm} cm)
@@ -490,13 +559,27 @@ export default function AdminDashboardPage() {
                         <td className="px-5 py-4">{getStatusBadge(order.orderStatus)}</td>
 
                         <td className="px-5 py-4 text-right">
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-amber-400 hover:text-zinc-950 text-zinc-200 font-medium transition-all text-xs cursor-pointer"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Detail</span>
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCustomerOrder(order)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-medium transition-all text-xs cursor-pointer border border-zinc-700 shadow-xs"
+                              title="Lihat Detail Lengkap Pelanggan & Alamat Pengiriman"
+                            >
+                              <User className="w-3.5 h-3.5 text-blue-400" />
+                              <span className="hidden sm:inline">Detail Customer</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setSelectedOrder(order)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-amber-400 hover:text-zinc-950 text-zinc-200 font-semibold transition-all text-xs cursor-pointer shadow-xs border border-zinc-700 hover:border-amber-400"
+                              title="Review Desain Keramik & Geometri 3D"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Review Desain & Geo</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -510,192 +593,26 @@ export default function AdminDashboardPage() {
     )}
   </main>
 
-      {/* Order Detail & Status Transition Modal */}
+      {/* Customer & Shipping Detail Modal */}
+      {selectedCustomerOrder && (
+        <CustomerDetailModal
+          order={selectedCustomerOrder}
+          onClose={() => setSelectedCustomerOrder(null)}
+          onOpenDesignReview={(ord) => {
+            setSelectedCustomerOrder(null);
+            setSelectedOrder(ord as any);
+          }}
+        />
+      )}
+
+      {/* Comprehensive Ceramic Design & Geometry Review Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto">
-          <div className="relative w-full max-w-3xl bg-zinc-900 border border-zinc-700/80 rounded-3xl p-6 shadow-2xl my-auto text-zinc-100">
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-lg font-bold text-white">{selectedOrder.orderNumber}</span>
-                  {getStatusBadge(selectedOrder.orderStatus)}
-                </div>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Dibuat pada {new Date(selectedOrder.createdAt).toLocaleString('id-ID')}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="py-5 space-y-6 max-h-[75vh] overflow-y-auto pr-1">
-              {/* Customer Info Card */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800/80">
-                <div>
-                  <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                    Informasi Pemesan
-                  </h4>
-                  <div className="space-y-1 text-xs">
-                    <div className="font-medium text-white">{selectedOrder.customerName}</div>
-                    <div className="text-zinc-400 flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-zinc-500" />
-                      <span>{selectedOrder.customerEmail}</span>
-                    </div>
-                    <div className="text-zinc-400 flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-zinc-500" />
-                      <span>{selectedOrder.customerPhone}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                    Alamat Pengiriman
-                  </h4>
-                  <div className="text-xs text-zinc-300 leading-relaxed flex items-start gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-zinc-500 mt-0.5 shrink-0" />
-                    <div>
-                      <div>{selectedOrder.shippingAddress}</div>
-                      <div className="text-zinc-400">
-                        {selectedOrder.city}, {selectedOrder.postalCode}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Items Detail */}
-              <div>
-                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-3">
-                  Detail Kustomisasi Piring 3D
-                </h4>
-                {selectedOrder.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-4 rounded-2xl bg-zinc-950/60 border border-zinc-800/80 flex flex-col sm:flex-row items-center gap-5"
-                  >
-                    <PlatePreview
-                      size="md"
-                      plateColorHex={item.plateColorHex}
-                      plateFinish={item.plateFinish}
-                      rimTrimName={item.rimTrimName}
-                      rimTrimCustomHex={item.rimTrimCustomHex}
-                      printCoverage={item.printCoverage}
-                      designImageUrl={item.designImageUrl || item.customization?.designImageUrl}
-                      designName={item.customization?.designName}
-                      snapshotRenderUrl={item.snapshotRenderUrl || item.customization?.previewSnapshotUrl}
-                      designScale={item.customization?.designScale ? Number(item.customization.designScale) : 1}
-                      designRotation={item.customization?.designRotation ? Number(item.customization.designRotation) : 0}
-                      designOffsetX={item.customization?.designOffsetX ? Number(item.customization.designOffsetX) : 0}
-                      designOffsetY={item.customization?.designOffsetY ? Number(item.customization.designOffsetY) : 0}
-                      designOpacity={item.customization?.designOpacity ? Number(item.customization.designOpacity) : 1}
-                      diameterCm={item.diameterCm}
-                    />
-
-                    <div className="flex-1 text-xs space-y-1 w-full text-center sm:text-left">
-                      <div className="font-bold text-sm text-white">
-                        {item.plateSizeName} (Diameter {item.diameterCm} cm)
-                      </div>
-                      <div className="text-zinc-400">
-                        Warna Glasir:{' '}
-                        <span className="font-medium text-zinc-200">{item.plateColorName}</span> ({item.plateColorHex})
-                      </div>
-                      <div className="text-zinc-400">
-                        Finishing: <span className="font-medium text-zinc-200 capitalize">{item.plateFinish}</span> •
-                        Trim Rim: <span className="font-medium text-amber-400">{formatRimTrimName(item.rimTrimName, item.rimTrimCustomHex) || 'Tanpa Rim'}</span>
-                      </div>
-                      <div className="text-zinc-400">
-                        Area Cetak: <span className="font-medium text-zinc-200 capitalize">{item.printCoverage}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <div className="text-zinc-400 text-[11px]">Jumlah: {item.quantity} pcs</div>
-                      <div className="text-base font-extrabold text-white">{formatRupiah(item.subtotalPrice)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Status Transition Control (Admin Action) */}
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
-                <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Shield className="w-4 h-4" />
-                  <span>Update Alur Produksi Studio</span>
-                </h4>
-                <p className="text-xs text-zinc-400 mb-3">
-                  Pilih status berikutnya untuk memperbarui tahapan piring di bengkel produksi keramik:
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { key: 'PENDING_PAYMENT', label: 'Menunggu Bayar' },
-                    { key: 'DESIGN_REVIEW', label: 'Review Desain' },
-                    { key: 'IN_PRODUCTION', label: 'Masuk Kiln / Cetak' },
-                    { key: 'QUALITY_CHECK', label: 'Quality Check (QC)' },
-                    { key: 'SHIPPED', label: 'Kirim ke Ekspedisi' },
-                    { key: 'DELIVERED', label: 'Selesai / Terkirim' },
-                    { key: 'CANCELLED', label: 'Batalkan' },
-                  ].map((st) => (
-                    <button
-                      key={st.key}
-                      disabled={updatingStatus || selectedOrder.orderStatus === st.key}
-                      onClick={() => handleUpdateOrderStatus(selectedOrder.id, st.key)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                        selectedOrder.orderStatus === st.key
-                          ? 'bg-amber-400 text-zinc-950 font-bold'
-                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
-                      }`}
-                    >
-                      {st.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Production Timeline Logs */}
-              {selectedOrder.logs && selectedOrder.logs.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-3">
-                    Riwayat Produksi (Audit Log)
-                  </h4>
-                  <div className="space-y-2.5">
-                    {selectedOrder.logs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="p-3 rounded-xl bg-zinc-950/40 border border-zinc-800/80 text-xs flex items-start gap-3"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 shrink-0" />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-white">{log.title}</span>
-                            <span className="text-[10px] text-zinc-500">
-                              {new Date(log.createdAt).toLocaleTimeString('id-ID', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          </div>
-                          <p className="text-zinc-400 text-[11px] mt-0.5">{log.description}</p>
-                          {log.operatorName && (
-                            <span className="text-[10px] text-zinc-500 font-mono mt-1 inline-block">
-                              Operator: {log.operatorName}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <DesignReviewModal
+          order={selectedOrder as any}
+          onClose={() => setSelectedOrder(null)}
+          onUpdateStatus={handleUpdateOrderStatus}
+          updatingStatus={updatingStatus}
+        />
       )}
     </div>
   );

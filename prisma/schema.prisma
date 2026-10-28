@@ -94,12 +94,19 @@ model User {
 }
 
 model PlateSize {
-  id             String                @id @db.VarChar(50) // 'dinner', 'salad', 'dessert'
-  name           String                @db.VarChar(100)
-  diameterCm     Decimal               @map("diameter_cm") @db.Decimal(5, 2)
-  basePrice      Decimal               @map("base_price") @db.Decimal(12, 2)
-  isActive       Boolean               @default(true) @map("is_active")
-  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  id                  String                @id @db.VarChar(50) // 'dinner', 'salad', 'dessert', 'soup'
+  name                String                @db.VarChar(100)
+  diameterCm          Decimal               @map("diameter_cm") @db.Decimal(5, 2)
+  basePrice           Decimal               @map("base_price") @db.Decimal(12, 2)
+  outerRadius         Decimal               @default(1.35) @map("outer_radius") @db.Decimal(5, 3)
+  wellRatio           Decimal               @default(0.63) @map("well_ratio") @db.Decimal(4, 2)
+  wellDepth           Decimal               @default(0.15) @map("well_depth") @db.Decimal(5, 3)
+  rimHeight           Decimal               @default(0.09) @map("rim_height") @db.Decimal(5, 3)
+  rimAngleDeg         Decimal               @default(18.0) @map("rim_angle_deg") @db.Decimal(4, 1)
+  thickness           Decimal               @default(0.045) @map("thickness") @db.Decimal(5, 3)
+  footRingRadiusRatio Decimal               @default(0.54) @map("foot_ring_radius_ratio") @db.Decimal(4, 2)
+  isActive            Boolean               @default(true) @map("is_active")
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz
 
   customizations PlateCustomization[]
 

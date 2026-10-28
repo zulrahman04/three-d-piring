@@ -3,6 +3,7 @@
 import React, { useState, useId } from 'react';
 import dynamic from 'next/dynamic';
 import { Download, Maximize2, Sparkles, Palette, Eye } from 'lucide-react';
+import { RimPattern } from '@/types/plate';
 
 // Dynamically import Three.js Plate3DViewer with ssr: false for pure 1:1 3D studio experience
 const Plate3DViewer = dynamic(() => import('@/components/3d/Plate3DViewer'), {
@@ -22,6 +23,10 @@ interface PlatePreviewProps {
   plateFinish?: string;
   rimTrimName?: string;
   rimTrimCustomHex?: string | null;
+  rimPattern?: RimPattern;
+  customRimPatternUrl?: string | null;
+  customRimPatternRepeat?: number;
+  customRimPatternMode?: 'repeat' | 'full';
   printCoverage?: string;
   designImageUrl?: string | null;
   designName?: string | null;
@@ -153,6 +158,10 @@ export default function PlatePreview({
   plateFinish = 'glossy',
   rimTrimName = 'none',
   rimTrimCustomHex,
+  rimPattern = 'none',
+  customRimPatternUrl,
+  customRimPatternRepeat = 24,
+  customRimPatternMode = 'repeat',
   printCoverage = 'center',
   designImageUrl,
   designName,
@@ -349,7 +358,10 @@ export default function PlatePreview({
             </div>
 
             {/* Main Stage */}
-            <div className="relative w-full h-[420px] bg-zinc-950/80 rounded-2xl border border-zinc-800/80 overflow-hidden flex items-center justify-center">
+            <div className="relative w-full h-[420px] bg-[#111318] rounded-2xl border border-zinc-700/60 overflow-hidden flex items-center justify-center">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_70%_at_50%_46%,_#2e3442_0%,_#1c202a_48%,_#111319_80%,_#090a0d_100%)] pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#08090d]/90 via-[#0e1015]/40 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(0,0,0,0.7)] pointer-events-none" />
               {viewMode === '3d' ? (
                 /* 1. Real 1:1 Three.js 3D Studio Canvas */
                 <Plate3DViewer
@@ -357,6 +369,10 @@ export default function PlatePreview({
                   plateFinish={plateFinish}
                   rimTrim={rimTrimName}
                   rimTrimCustomColor={rimTrimCustomHex}
+                  rimPattern={rimPattern}
+                  customRimPatternUrl={customRimPatternUrl}
+                  customRimPatternRepeat={customRimPatternRepeat}
+                  customRimPatternMode={customRimPatternMode}
                   printCoverage={printCoverage}
                   designUrl={artworkSrc}
                   designScale={designScale}

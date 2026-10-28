@@ -1,19 +1,26 @@
 import { create } from 'zustand';
-import { PlateCustomizationState, PlateSize, PlateFinish, RimTrim } from '@/types/plate';
-import { PLATE_SIZES, PLATE_COLORS, RIM_TRIMS, DESIGN_PRESETS } from '@/constants/presets';
+import { PlateCustomizationState, PlateSize, PlateFinish, RimTrim, RimPattern, LogoPlacement } from '@/types/plate';
+import { PLATE_SIZES, PLATE_COLORS, RIM_TRIMS, RIM_PATTERNS, DESIGN_PRESETS } from '@/constants/presets';
 
 export const usePlateStore = create<PlateCustomizationState>((set, get) => ({
-  // Default plate appearance: Dinner plate, Porcelain white, Glossy, No rim
+  // Default plate appearance: Master ukuran piring aktif
+  availableSizes: PLATE_SIZES,
   selectedSize: PLATE_SIZES[0],
   plateColor: PLATE_COLORS[0].hex,
   plateFinish: 'glossy' as PlateFinish,
   rimTrim: 'none' as RimTrim,
   rimTrimCustomColor: '#D4AF37',
+  rimPattern: 'none' as RimPattern,
+  customRimPatternUrl: null as string | null,
+  customRimPatternName: null as string | null,
+  customRimPatternRepeat: 24,
+  customRimPatternMode: 'repeat' as 'repeat' | 'full',
   printCoverage: 'center',
 
-  // Default design: Start with the Royal Delft Blue Floral preset for instant visual wow!
+  // Default design & Logo placement: Start with the Royal Delft Blue Floral preset
   designUrl: DESIGN_PRESETS[0].dataUrl,
   designName: DESIGN_PRESETS[0].name,
+  logoPlacement: 'center' as LogoPlacement,
   designScale: 1.0,
   designRotation: 0,
   designOffsetX: 0,
@@ -32,10 +39,60 @@ export const usePlateStore = create<PlateCustomizationState>((set, get) => ({
 
   // Actions
   setSize: (size: PlateSize) => set({ selectedSize: size }),
+  setAvailableSizes: (sizes: PlateSize[]) => set({ availableSizes: sizes }),
+  loadMasterSizes: async () => {
+    try {
+      const res = await fetch('/api/master/sizes');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.sizes && Array.isArray(data.sizes) && data.sizes.length > 0) {
+        const currentSelectedId = get().selectedSize.id;
+        const matchingCurrent = data.sizes.find((s: PlateSize) => s.id === currentSelectedId);
+        set({
+          availableSizes: data.sizes,
+          selectedSize: matchingCurrent || data.sizes[0],
+        });
+      }
+    } catch (err) {
+      console.warn('Gagal memuat master ukuran piring dari database:', err);
+    }
+  },
   setPlateColor: (color: string) => set({ plateColor: color }),
   setPlateFinish: (finish: PlateFinish) => set({ plateFinish: finish }),
   setRimTrim: (rim: RimTrim) => set({ rimTrim: rim }),
   setRimTrimCustomColor: (color: string) => set({ rimTrimCustomColor: color }),
+  setRimPattern: (pattern: RimPattern) => set({ rimPattern: pattern }),
+  setCustomRimPatternUrl: (url: string | null, name?: string) => {
+    const currentUrl = get().customRimPatternUrl;
+    if (currentUrl && currentUrl.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(currentUrl);
+      } catch {}
+    }
+    set({
+      customRimPatternUrl: url,
+      customRimPatternName: name || (url ? 'Custom Pattern' : null),
+      rimPattern: url ? 'custom' : 'none',
+    });
+  },
+  setCustomRimPatternRepeat: (repeat: number) =>
+    set({ customRimPatternRepeat: Math.max(4, Math.min(64, repeat)) }),
+  setCustomRimPatternMode: (mode: 'repeat' | 'full') =>
+    set({ customRimPatternMode: mode }),
+  clearCustomRimPattern: () => {
+    const currentUrl = get().customRimPatternUrl;
+    if (currentUrl && currentUrl.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(currentUrl);
+      } catch {}
+    }
+    set({
+      customRimPatternUrl: null,
+      customRimPatternName: null,
+      rimPattern: 'none',
+    });
+  },
+  setLogoPlacement: (placement: LogoPlacement) => set({ logoPlacement: placement }),
   setPrintCoverage: (coverage: 'center' | 'full') => set({ printCoverage: coverage }),
 
   setDesignImage: (url: string | null, name?: string) => {
@@ -100,8 +157,10 @@ export const usePlateStore = create<PlateCustomizationState>((set, get) => ({
     const printFee = state.designUrl ? 35000 : 0;
     const rimConfig = RIM_TRIMS.find((r) => r.id === state.rimTrim);
     const rimTrimFee = rimConfig ? rimConfig.price : 0;
+    const rimPatternConfig = RIM_PATTERNS.find((p) => p.id === state.rimPattern);
+    const rimPatternFee = state.rimPattern === 'custom' ? 35000 : (rimPatternConfig ? rimPatternConfig.price : 0);
 
-    const unitTotal = unitBasePrice + printFee + rimTrimFee;
+    const unitTotal = unitBasePrice + printFee + rimTrimFee + rimPatternFee;
     const quantity = state.orderQuantity;
     const grandTotal = unitTotal * quantity;
 
@@ -109,6 +168,7 @@ export const usePlateStore = create<PlateCustomizationState>((set, get) => ({
       unitBasePrice,
       printFee,
       rimTrimFee,
+      rimPatternFee,
       unitTotal,
       quantity,
       grandTotal,

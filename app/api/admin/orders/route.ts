@@ -23,7 +23,11 @@ export async function GET() {
         },
         items: {
           include: {
-            customization: true,
+            customization: {
+              include: {
+                plateSize: true,
+              },
+            },
           },
         },
         logs: {

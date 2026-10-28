@@ -56,12 +56,53 @@ export async function POST(req: Request) {
       gopay: PaymentMethod.GOPAY,
     };
 
-    // 2. Insert Customization
+    // 2. Fetch Master Plate Size & Color from database as authoritative source of truth
+    let masterPlateSize = await prisma.plateSize.findUnique({
+      where: { id: customization.plateSize || 'dinner' },
+    });
+
+    // Fallback to active master plate size in DB if id not found
+    if (!masterPlateSize) {
+      masterPlateSize = await prisma.plateSize.findFirst({
+        where: { isActive: true },
+      });
+    }
+
+    if (!masterPlateSize) {
+      return NextResponse.json(
+        { error: 'Master ukuran piring tidak ditemukan di database' },
+        { status: 400 }
+      );
+    }
+
+    const masterPlateColor = customization.plateColor
+      ? await prisma.plateColor.findFirst({
+          where: { hexCode: { equals: customization.plateColor, mode: 'insensitive' } },
+        })
+      : null;
+
+    const plateSizeName = masterPlateSize.name;
+    const diameterCm = Number(masterPlateSize.diameterCm);
+    const plateColorName = masterPlateColor?.name || customization.plateColorName || 'Porcelain White';
+    const plateColorHex = customization.plateColor || masterPlateColor?.hexCode || '#FAF7F2';
+
+    // Construct immutable CAD geometry snapshot directly from the Master table (100% Dynamic from Master)
+    const geometrySnapshot = {
+      outerRadius: Number(masterPlateSize.outerRadius),
+      wellRatio: Number(masterPlateSize.wellRatio),
+      wellDepth: Number(masterPlateSize.wellDepth),
+      rimHeight: Number(masterPlateSize.rimHeight),
+      rimAngleDeg: Number(masterPlateSize.rimAngleDeg),
+      thickness: Number(masterPlateSize.thickness),
+      footRingRadiusRatio: Number(masterPlateSize.footRingRadiusRatio),
+    };
+
+    // 3. Insert Customization with Master Snapshot
     const savedCustomization = await prisma.plateCustomization.create({
       data: {
         userId: user.id,
-        plateSizeId: customization.plateSize || 'dinner',
-        plateColorHex: customization.plateColor || '#FAF7F2',
+        plateSizeId: masterPlateSize?.id || customization.plateSize || 'dinner',
+        plateColorHex: plateColorHex,
         plateFinish: finishMap[customization.finish] || PlateFinish.GLOSSY,
         rimTrim: rimMap[customization.rimTrim] || RimTrim.NONE,
         rimTrimCustomColor: customization.rimTrimCustomColor || null,
@@ -74,10 +115,21 @@ export async function POST(req: Request) {
         designOffsetY: customization.designOffsetY || 0.0,
         designOpacity: customization.designOpacity || 1.0,
         previewSnapshotUrl: customization.snapshotUrl || null,
+        metadata: {
+          rimPattern: customization.rimPattern || 'none',
+          customRimPatternUrl: customization.customRimPatternUrl || null,
+          customRimPatternName: customization.customRimPatternName || null,
+          customRimPatternRepeat: customization.customRimPatternRepeat || 24,
+          customRimPatternMode: customization.customRimPatternMode || 'repeat',
+          logoPlacement: customization.logoPlacement || 'center',
+          diameterCm: diameterCm,
+          plateSizeName: plateSizeName,
+          geometrySnapshot: geometrySnapshot,
+        },
       },
     });
 
-    // 3. Create Order, Order Item & Initial Production Log
+    // 4. Create Order, Order Item & Initial Production Log
     const finalOrderNumber = orderNumber || `CRX-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
     const order = await prisma.order.create({
@@ -106,16 +158,16 @@ export async function POST(req: Request) {
         items: {
           create: {
             customizationId: savedCustomization.id,
-            plateSizeName: customization.plateSizeName || 'Dinner Plate',
-            diameterCm: customization.diameterCm || 27.0,
-            plateColorName: customization.plateColorName || 'Porcelain White',
-            plateColorHex: customization.plateColor || '#FAF7F2',
+            plateSizeName: plateSizeName,
+            diameterCm: diameterCm,
+            plateColorName: plateColorName,
+            plateColorHex: plateColorHex,
             plateFinish: finishMap[customization.finish] || PlateFinish.GLOSSY,
             rimTrimName: customization.rimTrim || 'none',
             rimTrimCustomHex: customization.rimTrimCustomColor || null,
             printCoverage: coverageMap[customization.printCoverage] || PrintCoverage.CENTER,
             designImageUrl: customization.designImageUrl || null,
-            snapshotRenderUrl: customization.snapshotUrl || 'data:image/svg+xml;base64,placeholder',
+            snapshotRenderUrl: customization.snapshotUrl || '',
 
             unitBasePrice: pricing.unitBasePrice || 125000,
             unitPrintFee: pricing.printFee || 0,

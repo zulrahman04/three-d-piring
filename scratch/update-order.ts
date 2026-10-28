@@ -8,13 +8,11 @@ async function main() {
   await prisma.orderItem.updateMany({
     data: {
       designImageUrl: preset.dataUrl,
-      snapshotRenderUrl: preset.dataUrl,
     },
   });
   await prisma.plateCustomization.updateMany({
     data: {
       designImageUrl: preset.dataUrl,
-      previewSnapshotUrl: preset.dataUrl,
     },
   });
   console.log('✅ Updated test order with Royal Delft motif!');

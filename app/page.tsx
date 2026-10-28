@@ -64,12 +64,12 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-zinc-950">
+    <div className="flex flex-col min-h-screen bg-slate-50 text-zinc-900">
       {/* Top Header Navbar */}
       <Navbar onTakeSnapshot={handleTakeSnapshot} />
 
       {/* Mobile Sticky Quick Jump Bar */}
-      <div className="lg:hidden sticky top-16 z-20 p-2.5 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-center gap-2">
+      <div className="lg:hidden sticky top-16 z-20 p-2.5 bg-white/90 backdrop-blur-md border-b border-zinc-200 flex items-center justify-center gap-2">
         <button
           onClick={() => {
             setMobileTab('canvas');
@@ -78,7 +78,7 @@ export default function Home() {
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
             mobileTab === 'canvas'
               ? 'bg-indigo-600 text-white shadow-sm'
-              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+              : 'bg-zinc-100 text-zinc-600 hover:text-zinc-900'
           }`}
         >
           <Eye className="w-3.5 h-3.5" />
@@ -93,7 +93,7 @@ export default function Home() {
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
             mobileTab === 'controls'
               ? 'bg-indigo-600 text-white shadow-sm'
-              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
+              : 'bg-zinc-100 text-zinc-600 hover:text-zinc-900'
           }`}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -102,17 +102,17 @@ export default function Home() {
       </div>
 
       {/* Main Studio Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[calc(100vh-5rem)]">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[calc(100vh-5rem)]">
         {/* Left Section: 3D Studio Canvas Viewport (7 cols on lg, 8 on xl) - NEVER uses display:none */}
         <section
           id="studio-canvas"
-          className="relative lg:col-span-7 xl:col-span-8 flex flex-col rounded-3xl overflow-hidden border border-zinc-200/80 dark:border-zinc-800/80 shadow-xl bg-gradient-to-b from-slate-100/90 via-slate-200/60 to-slate-100/90 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-zinc-950"
+          className="relative lg:col-span-7 xl:col-span-8 flex flex-col rounded-3xl overflow-hidden border border-zinc-700/60 shadow-2xl bg-[#0e1015] bg-[url('/studio-dark-backdrop.jpg')] bg-cover bg-center lg:sticky lg:top-20 lg:h-[calc(100vh-6.5rem)] lg:max-h-[660px] lg:min-h-[480px]"
         >
-          {/* Subtle Radial Glow Backdrop */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
+          {/* Subtle perimeter vignette to frame the 3D studio */}
+          <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(0,0,0,0.7)] pointer-events-none z-10" />
 
           {/* Interactive 3D Canvas */}
-          <div className="relative flex-1 w-full h-[360px] sm:h-[480px] lg:h-full min-h-[340px]">
+          <div className="relative flex-1 w-full h-[360px] sm:h-[440px] lg:h-full min-h-[340px]">
             <PlateCanvas onRegisterCapture={handleRegisterCapture} />
             <ViewportControls onTakeSnapshot={handleTakeSnapshot} />
           </div>
