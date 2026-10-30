@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   allowedDevOrigins: [
+    "neighbors-folding-adjustments-stickers.trycloudflare.com",
     "*.trycloudflare.com",
     "**.trycloudflare.com",
     "*.ngrok-free.app",

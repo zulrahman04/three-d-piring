@@ -2,6 +2,7 @@
 
 import React, { Suspense, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { AdaptiveDpr } from '@react-three/drei';
 import PlateModel, { PlateModelProps } from './PlateModel';
 import { StudioBackdrop, StudioLighting, PlateSubjectRotator } from './PlateCanvas';
 import { Eye, RotateCw, Compass, ZoomIn, FlipVertical, Camera } from 'lucide-react';
@@ -174,16 +175,18 @@ export default function Plate3DViewer({
       {/* Main 3D Canvas with EXACT same studio lighting and shadows as real-time studio */}
       <div className="relative w-full h-full flex-1">
         <Canvas
-          shadows
+          shadows="percentage"
           camera={{ position: [0, 0, 5], fov: 42 }}
           gl={{
-            preserveDrawingBuffer: true,
+            preserveDrawingBuffer: false,
             antialias: true,
             alpha: true,
-            powerPreference: 'default',
+            powerPreference: 'high-performance',
+            failIfMajorPerformanceCaveat: false,
           }}
           dpr={[1, 1.5]}
         >
+          <AdaptiveDpr pixelated={false} />
           <Suspense fallback={null}>
             {/* Same photography backdrop */}
             <StudioBackdrop />

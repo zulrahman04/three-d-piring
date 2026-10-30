@@ -47,23 +47,34 @@ function PlateCrossSectionViewer({
   const rimTopY = wellBottomY - wellDepth * scale;
   const lipThickness = thickness * 0.75 * scale;
 
+  const floorR = Math.min(footRingRadius * 0.94, wellRadius * 0.78);
+  const shoulderCpX = floorR + Math.max(5, wellRadius - floorR) * 0.52;
+  const shoulderEndY = wellBottomY - wellDepth * scale * 0.42;
+  const rimMidX = wellRadius + (rOuter - wellRadius) * 0.48;
+  const rimMidY = wellBottomY - wellDepth * scale * 0.74;
+  const bStartY = rimTopY + lipThickness;
+  const bEndX = footRingRadius + 0.025 * scale;
+  const bEndY = tableY - (footHeight + thickness * scale * 0.22);
+  const bCpX = bEndX + (rOuter - bEndX) * 0.42;
+  const bCpY = bEndY - (bEndY - bStartY) * 0.34;
+
   const crossSectionPath = `
     M ${cx - rOuter} ${rimTopY}
-    Q ${cx - (wellRadius + (rOuter - wellRadius) * 0.48)} ${wellBottomY - wellDepth * scale * 0.35 + 2} ${cx - wellRadius} ${wellBottomY - wellDepth * scale * 0.35}
-    Q ${cx - wellRadius * 0.94} ${wellBottomY + 1} ${cx - wellRadius * 0.82} ${wellBottomY}
-    L ${cx + wellRadius * 0.82} ${wellBottomY}
-    Q ${cx + wellRadius * 0.94} ${wellBottomY + 1} ${cx + wellRadius} ${wellBottomY - wellDepth * scale * 0.35}
-    Q ${cx + (wellRadius + (rOuter - wellRadius) * 0.48)} ${wellBottomY - wellDepth * scale * 0.35 + 2} ${cx + rOuter} ${rimTopY}
-    A ${lipThickness * 0.5} ${lipThickness * 0.5} 0 0 1 ${cx + rOuter} ${rimTopY + lipThickness}
-    Q ${cx + wellRadius * 0.98} ${wellBottomY - wellDepth * scale * 0.35 + lipThickness * 0.85} ${cx + footRingRadius + 0.04 * scale} ${tableY - (footHeight + thickness * scale * 0.3)}
+    Q ${cx - rimMidX} ${rimMidY} ${cx - wellRadius} ${shoulderEndY}
+    Q ${cx - shoulderCpX} ${wellBottomY - wellDepth * scale * 0.08} ${cx - floorR} ${wellBottomY}
+    L ${cx + floorR} ${wellBottomY}
+    Q ${cx + shoulderCpX} ${wellBottomY - wellDepth * scale * 0.08} ${cx + wellRadius} ${shoulderEndY}
+    Q ${cx + rimMidX} ${rimMidY} ${cx + rOuter} ${rimTopY}
+    A ${lipThickness * 0.5} ${lipThickness * 0.5} 0 0 1 ${cx + rOuter} ${bStartY}
+    Q ${cx + bCpX} ${bCpY} ${cx + bEndX} ${bEndY}
     L ${cx + footRingRadius} ${tableY}
     L ${cx + footRingRadius - 0.04 * scale} ${tableY}
     L ${cx + footRingRadius - 0.05 * scale} ${tableY - footHeight}
     L ${cx - (footRingRadius - 0.05 * scale)} ${tableY - footHeight}
     L ${cx - (footRingRadius - 0.04 * scale)} ${tableY}
     L ${cx - footRingRadius} ${tableY}
-    L ${cx - (footRingRadius + 0.04 * scale)} ${tableY - (footHeight + thickness * scale * 0.3)}
-    Q ${cx - wellRadius * 0.98} ${wellBottomY - wellDepth * scale * 0.35 + lipThickness * 0.85} ${cx - rOuter} ${rimTopY + lipThickness}
+    L ${cx - bEndX} ${bEndY}
+    Q ${cx - bCpX} ${bCpY} ${cx - rOuter} ${bStartY}
     A ${lipThickness * 0.5} ${lipThickness * 0.5} 0 0 1 ${cx - rOuter} ${rimTopY}
     Z
   `;
