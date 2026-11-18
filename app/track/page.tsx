@@ -163,28 +163,28 @@ function TrackOrderContent() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-zinc-900">
+    <div className="min-h-screen bg-[#F4F3F0] text-[#1C1917]">
       {/* Header */}
-      <header className="w-full border-b border-zinc-200/80 bg-white/90 backdrop-blur-md sticky top-0 z-30">
+      <header className="w-full border-b border-stone-200/80 bg-white/85 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Link
             href="/"
-            className="flex items-center gap-2 text-xs font-bold text-zinc-600 hover:text-indigo-600 transition-colors"
+            className="flex items-center gap-2 text-xs font-medium text-stone-600 hover:text-[#1C1917] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Studio 3D</span>
           </Link>
 
           <div className="flex items-center gap-2">
-            <PackageSearch className="w-4 h-4 text-indigo-600" />
-            <span className="font-extrabold text-sm tracking-tight text-zinc-900">
-              CERAMIX 3D • Lacak Pesanan
+            <PackageSearch className="w-4 h-4 text-stone-700" />
+            <span className="font-[family-name:var(--font-display)] font-semibold text-sm tracking-[0.06em] text-[#1C1917]">
+              CERAMIX 3D • LACAK PESANAN
             </span>
           </div>
 
           <Link
             href="/landing"
-            className="text-xs font-semibold text-indigo-600 hover:underline hidden sm:inline"
+            className="text-xs font-medium text-stone-600 hover:text-[#1C1917] hover:underline hidden sm:inline transition-colors"
           >
             Tentang Studio
           </Link>
@@ -193,42 +193,42 @@ function TrackOrderContent() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
         {/* Search Hero Card */}
-        <section className="bg-white rounded-3xl border border-zinc-200/80 shadow-xl p-6 sm:p-8 text-center space-y-5">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-100">
-            <PackageSearch className="w-6 h-6" />
+        <section className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-8 text-center space-y-5">
+          <div className="w-12 h-12 rounded-2xl bg-[#F4F3F0] text-[#1C1917] flex items-center justify-center mx-auto border border-stone-200/80">
+            <PackageSearch className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900">
-              Lacak Status Produksi & Pengiriman
+            <h1 className="font-[family-name:var(--font-display)] text-2xl sm:text-3xl font-semibold tracking-wide text-[#1C1917]">
+              Lacak Status Produksi &amp; Pengiriman
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-500 mt-1.5 max-w-lg mx-auto">
-              Masukkan Nomor Pesanan Anda (contoh: <span className="font-mono font-semibold text-zinc-700">CRX-...</span>) untuk memantau proses cetak kiln, nomor resi, atau mengunggah bukti pembayaran.
+            <p className="text-xs sm:text-sm text-stone-500 mt-2 max-w-lg mx-auto leading-relaxed">
+              Masukkan Nomor Pesanan Anda (contoh: <span className="font-mono font-semibold text-[#1C1917]">CRX-...</span>) untuk memantau proses cetak kiln, nomor resi, atau mengunggah bukti pembayaran.
             </p>
           </div>
 
           <form onSubmit={handleSearch} className="max-w-md mx-auto flex gap-2">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
+              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
               <input
                 type="text"
                 value={orderInput}
                 onChange={(e) => setOrderInput(e.target.value)}
                 placeholder="Masukkan ID Pesanan (CRX-...)"
                 required
-                className="w-full pl-10 pr-4 py-2.5 text-sm font-mono rounded-xl border border-zinc-300 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full pl-10 pr-4 py-2.5 text-sm font-mono rounded-xl border border-stone-200/90 bg-[#FBFBFA] focus:bg-white focus:border-stone-500 focus:ring-1 focus:ring-stone-400/40 outline-none transition-all"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl bg-[#1C1917] hover:bg-stone-800 text-white font-medium text-sm shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-2 transition-all duration-200"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Lacak</span>}
             </button>
           </form>
 
           {error && (
-            <div className="max-w-md mx-auto p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 text-left">
+            <div className="max-w-md mx-auto p-3 rounded-xl bg-rose-50 border border-rose-200/80 text-rose-700 text-xs flex items-center gap-2 text-left">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -239,32 +239,32 @@ function TrackOrderContent() {
         {order && (
           <div className="space-y-6">
             {/* Status Stepper Card */}
-            <section className="bg-white rounded-3xl border border-zinc-200/80 shadow-lg p-6 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-zinc-100">
+            <section className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-stone-200/70">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-stone-400">
                     Nomor Pesanan
                   </p>
-                  <h2 className="text-xl font-black font-mono text-indigo-600">
+                  <h2 className="text-xl font-semibold font-mono text-[#1C1917] mt-0.5">
                     {order.orderNumber}
                   </h2>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    Pemesan: <strong className="text-zinc-800">{order.customerName}</strong> • {order.city}
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Pemesan: <strong className="text-[#1C1917]">{order.customerName}</strong> • {order.city}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                    className={`px-3 py-1 rounded-full text-xs font-medium border ${
                       order.paymentStatus === 'PAID'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                        ? 'bg-[#F4F3F0] text-[#4A5D4E] border-stone-200/90'
+                        : 'bg-[#FBFBFA] text-stone-700 border-stone-200/90'
                     }`}
                   >
                     Pembayaran: {order.paymentStatus === 'PAID' ? 'Lunas' : 'Belum Dibayar'}
                   </span>
                   {order.trackingNumber && (
-                    <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">
+                    <span className="px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#F4F3F0] text-[#1C1917] border border-stone-200/80">
                       Resi: {order.trackingNumber}
                     </span>
                   )}
@@ -273,7 +273,7 @@ function TrackOrderContent() {
 
               {/* Cancelled Banner or 6-Stage Progress */}
               {order.orderStatus === 'CANCELLED' ? (
-                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold text-center">
+                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200/80 text-rose-700 text-sm font-medium text-center">
                   Pesanan ini telah dibatalkan.
                 </div>
               ) : (
@@ -285,16 +285,16 @@ function TrackOrderContent() {
                     return (
                       <div
                         key={stage.key}
-                        className={`p-3 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition-all ${
+                        className={`p-3 rounded-xl border text-center flex flex-col items-center gap-1.5 transition-all duration-200 ${
                           current
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm ring-2 ring-indigo-500/20'
+                            ? 'border-[#1C1917] bg-[#1C1917] text-white shadow-xs'
                             : done
-                            ? 'border-emerald-200 bg-emerald-50/60 text-emerald-700'
-                            : 'border-zinc-200 bg-zinc-50/50 text-zinc-400'
+                            ? 'border-stone-300/80 bg-[#F4F3F0] text-[#1C1917]'
+                            : 'border-stone-200/70 bg-[#FBFBFA] text-stone-400'
                         }`}
                       >
-                        <Icon className="w-5 h-5" />
-                        <span className="text-[11px] font-bold leading-tight">{stage.label}</span>
+                        <Icon className="w-4 h-4" />
+                        <span className="text-[11px] font-medium leading-tight">{stage.label}</span>
                       </div>
                     );
                   })}
@@ -305,9 +305,9 @@ function TrackOrderContent() {
             {/* Payment Proof Upload + Items Grid */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Items & Totals (7 cols) */}
-              <section className="md:col-span-7 bg-white rounded-3xl border border-zinc-200/80 shadow-lg p-6 space-y-4">
-                <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-indigo-600" />
+              <section className="md:col-span-7 bg-white rounded-2xl border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-4">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-stone-500 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-stone-600" />
                   Rincian Piring Kustom ({order.items.length} Varian)
                 </h3>
 
@@ -315,9 +315,9 @@ function TrackOrderContent() {
                   {order.items.map((item) => (
                     <div
                       key={item.id}
-                      className="p-3 rounded-2xl bg-zinc-50 border border-zinc-200/80 flex items-center gap-3.5"
+                      className="p-3 rounded-xl bg-[#FBFBFA] border border-stone-200/80 flex items-center gap-3.5"
                     >
-                      <div className="w-16 h-16 rounded-xl bg-zinc-900 overflow-hidden shrink-0 flex items-center justify-center">
+                      <div className="w-16 h-16 rounded-xl bg-[#F4F3F0] border border-stone-200/70 overflow-hidden shrink-0 flex items-center justify-center">
                         {item.snapshotRenderUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -327,22 +327,22 @@ function TrackOrderContent() {
                           />
                         ) : (
                           <div
-                            className="w-10 h-10 rounded-full border-2 border-white/30"
+                            className="w-10 h-10 rounded-full border border-stone-300"
                             style={{ backgroundColor: item.plateColorHex }}
                           />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-zinc-900">
+                        <p className="text-xs font-semibold text-[#1C1917]">
                           {item.plateSizeName} ({item.diameterCm} cm) × {item.quantity} pcs
                         </p>
-                        <p className="text-[11px] text-zinc-500 capitalize">
+                        <p className="text-[11px] text-stone-500 capitalize">
                           {item.plateColorName} • {item.plateFinish}
                           {item.designName ? ` • ${item.designName}` : ''}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xs font-bold text-indigo-600">
+                        <p className="text-xs font-semibold text-[#1C1917]">
                           Rp {item.subtotalPrice.toLocaleString('id-ID')}
                         </p>
                       </div>
@@ -350,16 +350,16 @@ function TrackOrderContent() {
                   ))}
                 </div>
 
-                <div className="pt-3 border-t border-zinc-200 space-y-1.5 text-xs">
+                <div className="pt-3 border-t border-stone-200/80 space-y-1.5 text-xs">
                   {order.discountAmount > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-semibold">
+                    <div className="flex justify-between text-[#4A5D4E] font-medium">
                       <span>Diskon Grosir:</span>
                       <span>-Rp {order.discountAmount.toLocaleString('id-ID')}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-black text-zinc-900">
+                  <div className="flex justify-between text-sm font-semibold text-[#1C1917]">
                     <span>Total Tagihan ({order.paymentMethod}):</span>
-                    <span className="text-indigo-600">
+                    <span>
                       Rp {order.grandTotal.toLocaleString('id-ID')}
                     </span>
                   </div>
@@ -367,9 +367,9 @@ function TrackOrderContent() {
               </section>
 
               {/* Upload Payment Proof (5 cols) */}
-              <section className="md:col-span-5 bg-white rounded-3xl border border-zinc-200/80 shadow-lg p-6 space-y-4">
-                <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-indigo-600" />
+              <section className="md:col-span-5 bg-white rounded-2xl border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-4">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-stone-500 flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-stone-600" />
                   Bukti Pembayaran
                 </h3>
 
@@ -383,7 +383,7 @@ function TrackOrderContent() {
 
                 {order.paymentProofUrl ? (
                   <div className="space-y-3">
-                    <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-50">
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden border border-stone-200/80 bg-[#FBFBFA]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={order.paymentProofUrl}
@@ -392,7 +392,7 @@ function TrackOrderContent() {
                       />
                     </div>
                     {uploadSuccess && (
-                      <p className="text-xs font-semibold text-emerald-600">
+                      <p className="text-xs font-medium text-[#4A5D4E]">
                         ✓ Bukti transfer berhasil diunggah dan diteruskan ke Admin!
                       </p>
                     )}
@@ -401,7 +401,7 @@ function TrackOrderContent() {
                         type="button"
                         disabled={uploadingProof}
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 hover:bg-zinc-50 text-xs font-bold text-zinc-700 cursor-pointer"
+                        className="w-full py-2.5 px-4 rounded-xl border border-stone-200/90 hover:bg-[#F4F3F0] text-xs font-medium text-[#1C1917] transition-colors cursor-pointer"
                       >
                         {uploadingProof ? 'Mengunggah...' : 'Ganti Bukti Pembayaran'}
                       </button>
@@ -409,14 +409,14 @@ function TrackOrderContent() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-xs text-zinc-500 leading-relaxed">
-                      Sudah melakukan pembayaran via <strong className="uppercase">{order.paymentMethod}</strong>? Unggah tangkapan layar/foto struk agar tim kami segera memproses pesanan ke tahap desain & kiln.
+                    <p className="text-xs text-stone-500 leading-relaxed">
+                      Sudah melakukan pembayaran via <strong className="uppercase text-[#1C1917]">{order.paymentMethod}</strong>? Unggah tangkapan layar/foto struk agar tim kami segera memproses pesanan ke tahap desain &amp; kiln.
                     </p>
                     <button
                       type="button"
                       disabled={uploadingProof}
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="w-full py-3 px-4 rounded-xl bg-[#1C1917] hover:bg-stone-800 text-white font-medium text-xs shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all duration-200"
                     >
                       {uploadingProof ? (
                         <>
@@ -436,24 +436,24 @@ function TrackOrderContent() {
             </div>
 
             {/* Production History Logs */}
-            <section className="bg-white rounded-3xl border border-zinc-200/80 shadow-lg p-6 space-y-4">
-              <h3 className="text-sm font-bold text-zinc-900">Riwayat Log Produksi</h3>
+            <section className="bg-white rounded-2xl border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-4">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-stone-500">Riwayat Log Produksi</h3>
               <div className="space-y-3">
                 {order.logs.map((log) => (
                   <div
                     key={log.id}
-                    className="flex items-start gap-3 p-3 rounded-2xl bg-zinc-50 border border-zinc-200/60"
+                    className="flex items-start gap-3 p-3 rounded-xl bg-[#FBFBFA] border border-stone-200/70"
                   >
-                    <div className="w-2 h-2 rounded-full bg-indigo-600 mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-[#57534E] mt-1.5 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-bold text-zinc-900">{log.title}</p>
-                        <span className="text-[10px] font-mono text-zinc-400">
+                        <p className="text-xs font-semibold text-[#1C1917]">{log.title}</p>
+                        <span className="text-[10px] font-mono text-stone-400">
                           {new Date(log.createdAt).toLocaleString('id-ID')}
                         </span>
                       </div>
                       {log.description && (
-                        <p className="text-xs text-zinc-600 mt-0.5">{log.description}</p>
+                        <p className="text-xs text-stone-600 mt-0.5">{log.description}</p>
                       )}
                     </div>
                   </div>
@@ -471,7 +471,7 @@ export default function TrackOrderPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 text-zinc-500 text-sm">
+        <div className="min-h-screen flex items-center justify-center bg-[#F4F3F0] text-stone-500 text-sm">
           Memuat pelacakan pesanan...
         </div>
       }

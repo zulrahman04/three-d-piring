@@ -473,8 +473,8 @@ export default function PlateModel(props?: PlateModelProps) {
   const footRingRadiusRatio = selectedSize?.footRingRadiusRatio ?? 0.56;
 
   const effectivePlateColor = useMemo(() => {
-    if (!plateColor || plateColor.toLowerCase() === '#ffffff' || plateColor.toLowerCase() === '#faf7f2') {
-      return '#fcfbf9';
+    if (!plateColor || ['#ffffff', '#faf7f2', '#fcfbf9'].includes(plateColor.toLowerCase())) {
+      return '#FCFBF9';
     }
     return plateColor;
   }, [plateColor]);
@@ -1005,8 +1005,8 @@ export default function PlateModel(props?: PlateModelProps) {
         wellR * 1.08
       );
       aoGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      aoGrad.addColorStop(0.45, 'rgba(15, 23, 42, 0.038)'); // Lipatan dalam cekungan (inner well crease)
-      aoGrad.addColorStop(0.82, 'rgba(255, 255, 255, 0.045)'); // Punggung bahu cekungan (shoulder crown highlight)
+      aoGrad.addColorStop(0.45, 'rgba(41, 37, 36, 0.048)'); // Lipatan dalam cekungan hangat (inner well crease)
+      aoGrad.addColorStop(0.82, 'rgba(255, 255, 255, 0.05)'); // Punggung bahu cekungan (shoulder crown highlight)
       aoGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
       ctx.fillStyle = aoGrad;
@@ -1159,7 +1159,7 @@ export default function PlateModel(props?: PlateModelProps) {
       {/* 3. Cincin Kaki Penopang Bawah Tanpa Glasir (Authentic Unglazed Bisque Foot Ring) */}
       <mesh geometry={footRingBisqueGeometry} receiveShadow>
         <meshStandardMaterial
-          color="#ebe5dc"
+          color="#E8E2D7"
           roughness={0.88}
           metalness={0.0}
           envMapIntensity={0.15}
@@ -1201,19 +1201,19 @@ export default function PlateModel(props?: PlateModelProps) {
           {/* Inner Flat Basin Safe-Zone Ring */}
           <mesh position={[0, safeZoneWellBottomY + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[safeZoneFloorR - 0.006, safeZoneFloorR, 72]} />
-            <meshBasicMaterial color="#4f46e5" transparent opacity={0.75} depthTest={false} />
+            <meshBasicMaterial color="#57534E" transparent opacity={0.75} depthTest={false} />
           </mesh>
 
           {/* Outer Rim Safe Boundary Ring */}
           <mesh position={[0, rimApexY + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[outerRadius * 0.93 - 0.004, outerRadius * 0.93, 96]} />
-            <meshBasicMaterial color="#0ea5e9" transparent opacity={0.45} depthTest={false} />
+            <meshBasicMaterial color="#78716C" transparent opacity={0.5} depthTest={false} />
           </mesh>
 
           {/* 12 O'Clock (Jam 12) Target Marker for Top-Rim Logo */}
           <mesh position={[0, rimApexY - 0.015, -safeZoneRimMidR]} rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[0.022, 0.036, 32]} />
-            <meshBasicMaterial color="#f59e0b" transparent opacity={0.9} depthTest={false} />
+            <meshBasicMaterial color="#B45309" transparent opacity={0.85} depthTest={false} />
           </mesh>
         </group>
       )}

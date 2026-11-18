@@ -520,7 +520,7 @@ NO. ORDER: #${order.orderNumber}`;
               </div>
 
               {/* Viewport Frame */}
-              <div className="relative w-full h-[460px] bg-[#0c0e12] rounded-3xl border border-zinc-700/80 overflow-hidden flex items-center justify-center shadow-inner">
+              <div className={`relative w-full h-[460px] rounded-2xl border overflow-hidden flex items-center justify-center ${visualSubView === '3d' ? 'bg-[#F4F3F0] border-stone-200/80' : 'bg-[#0c0e12] border-zinc-700/80 shadow-inner'}`}>
                 {visualSubView === '3d' ? (
                   <Plate3DViewer
                     plateColor={plateColorHex}

@@ -56,7 +56,7 @@ export const PLATE_SIZES: PlateSize[] = [
 ];
 
 export const PLATE_COLORS: PlateColor[] = [
-  { id: 'porcelain-white', name: 'Porcelain White', hex: '#FAF7F2', description: 'Putih gading porselen klasik berkilau' },
+  { id: 'porcelain-white', name: 'Porcelain White', hex: '#FCFBF9', description: 'Putih gading alami porselen halus' },
   { id: 'matte-black', name: 'Matte Obsidian', hex: '#232326', description: 'Hitam arang doff modern dan eksklusif' },
   { id: 'warm-cream', name: 'Warm Cream', hex: '#E8CCA4', description: 'Krem vanila hangat bernuansa rustic' },
   { id: 'sage-green', name: 'Sage Green', hex: '#7D9678', description: 'Hijau sage pastel lembut bernuansa alam' },
@@ -70,7 +70,7 @@ export const RIM_TRIMS = [
   { id: 'gold', name: '24K Gold Luster Rim', hex: '#D4AF37', price: 35000 },
   { id: 'silver', name: 'Platinum Silver Rim', hex: '#C0C0C0', price: 30000 },
   { id: 'rose-gold', name: 'Rose Gold Rim', hex: '#B76E79', price: 35000 },
-  { id: 'custom', name: 'Warna Kustom (Hex)', hex: '#4F46E5', price: 35000 },
+  { id: 'custom', name: 'Warna Kustom (Hex)', hex: '#78716C', price: 35000 },
 ] as const;
 
 export interface RimPatternItem {

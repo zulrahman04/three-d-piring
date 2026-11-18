@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -13,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Demo 3D - Design Plate Dzul",
-  description: "Design Plate 3D",
+  title: "CERAMIX 3D STUDIO — Bespoke Porcelain Customizer",
+  description: "Atelier Kustomisasi Piring Porselen 3D bergaya Scandinavian Japandi",
 };
 
 import AdminShortcutListener from "@/components/common/AdminShortcutListener";
@@ -22,10 +29,10 @@ import AdminShortcutListener from "@/components/common/AdminShortcutListener";
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="id"
+      className={`${plusJakartaSans.variable} ${outfit.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-zinc-900 antialiased selection:bg-indigo-500/20 selection:text-indigo-700">
+      <body className="min-h-full flex flex-col bg-[#F4F3F0] text-[#1C1917] antialiased selection:bg-stone-800/10 selection:text-stone-900">
         <AdminShortcutListener />
         {children}
       </body>

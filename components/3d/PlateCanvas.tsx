@@ -7,43 +7,67 @@ import * as THREE from 'three';
 import PlateModel from './PlateModel';
 import { usePlateStore } from '@/store/usePlateStore';
 
-// Module-level singleton texture cache so the studio backdrop loads once and never flickers or reloads
+// Module-level singleton texture cache for the Scandinavian Japandi warm ivory studio cyclorama
 let cachedBackdropTexture: THREE.Texture | null = null;
 
-// Studio Backdrop with 3D perspective plane: zooms with camera and stays stationary when plate is rotated
+function getJapandiBackdropTexture(): THREE.Texture | null {
+  if (cachedBackdropTexture) return cachedBackdropTexture;
+  if (typeof document === 'undefined') return null;
+
+  const width = 1024;
+  const height = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  // Base warm ivory studio background (#F4F3F0)
+  ctx.fillStyle = '#F4F3F0';
+  ctx.fillRect(0, 0, width, height);
+
+  // Soft overhead warm white gallery glow (#FBFBFA) gently fading to warm ivory (#F4F3F0) and subtle perimeter (#EDEBE6)
+  const radGrad = ctx.createRadialGradient(
+    width * 0.5,
+    height * 0.44,
+    width * 0.06,
+    width * 0.5,
+    height * 0.48,
+    width * 0.72
+  );
+  radGrad.addColorStop(0, '#FBFBFA');
+  radGrad.addColorStop(0.45, '#F6F5F2');
+  radGrad.addColorStop(0.78, '#F2F0EC');
+  radGrad.addColorStop(1, '#EBE9E3');
+
+  ctx.fillStyle = radGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  cachedBackdropTexture = tex;
+  return tex;
+}
+
+// Studio Backdrop with 3D perspective plane: warm ivory Scandinavian cyclorama that stays stationary when plate rotates
 export function StudioBackdrop() {
   const { scene } = useThree();
-  const [backdropTex, setBackdropTex] = useState<THREE.Texture | null>(cachedBackdropTexture);
+  const backdropTex = useMemo(() => getJapandiBackdropTexture(), []);
 
   useEffect(() => {
-    let active = true;
-
-    if (cachedBackdropTexture) {
-      scene.background = cachedBackdropTexture;
-      setBackdropTex(cachedBackdropTexture);
-      return () => {
-        scene.background = null;
-      };
+    if (backdropTex) {
+      scene.background = backdropTex;
+    } else {
+      scene.background = new THREE.Color('#F4F3F0');
     }
 
-    const loader = new THREE.TextureLoader();
-    loader.load('/studio-dark-backdrop.jpg', (texture) => {
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
-      texture.generateMipmaps = false;
-      cachedBackdropTexture = texture;
-
-      if (!active) return;
-      scene.background = texture;
-      setBackdropTex(texture);
-    });
-
     return () => {
-      active = false;
       scene.background = null;
     };
-  }, [scene]);
+  }, [scene, backdropTex]);
 
   if (!backdropTex) return null;
 
@@ -59,20 +83,20 @@ export function StudioBackdrop() {
   );
 }
 
-// Studio Lighting calibrated for glossy porcelain, metallic 24K trims, and photorealistic depth
+// Studio Lighting calibrated for bright Scandinavian Japandi daylight, crisp #FCFBF9 porcelain definition, and warm trims
 // Uses 1-Frame GPU-Baked Studio Softbox Lightformers (Zero network latency, 60 FPS, authentic tableware highlights)
 export function StudioLighting() {
   return (
     <>
-      {/* 1. Cahaya Lingkungan Netral (Menjaga warna putih porselen tetap bersih) */}
-      <ambientLight intensity={0.62} color="#ffffff" />
+      {/* 1. Cahaya Lingkungan Hangat-Alami (Menjaga porselen putih gading tetap bersih & bervolume) */}
+      <ambientLight intensity={0.56} color="#fffefb" />
 
       {/* 2. Spotlight Utama — Menyudut dari atas-kanan untuk definisi lekukan cekungan */}
       <spotLight
-        position={[3.5, 6.5, 2.0]}
+        position={[3.5, 6.5, 2.2]}
         angle={0.55}
-        penumbra={0.92}
-        intensity={3.1}
+        penumbra={0.94}
+        intensity={2.95}
         color="#ffffff"
         castShadow
         shadow-bias={-0.0001}
@@ -82,23 +106,23 @@ export function StudioLighting() {
       />
 
       {/* 3. Key Light Samping Kanan (Menonjolkan garis punggung lekukan / shoulder ridge) */}
-      <directionalLight position={[5.0, 3.2, 1.2]} intensity={1.15} color="#ffffff" />
+      <directionalLight position={[5.2, 3.1, 1.3]} intensity={1.18} color="#fffcf7" />
 
-      {/* 4. Fill Light Kiri Bawah (Melembutkan area bayangan dengan rona studio sejuk) */}
-      <directionalLight position={[-4.2, -2.0, 1.8]} intensity={0.42} color="#f1f5f9" />
+      {/* 4. Fill Light Kiri Hangat Lembut (Membentuk kontras natural agar piring tetap menonjol dari latar ivory) */}
+      <directionalLight position={[-4.4, -1.6, 1.8]} intensity={0.34} color="#f2efe9" />
 
-      {/* 5. Rim Light Atas (Garis lengkung bibir piring & kilau emas 24K) */}
-      <pointLight position={[0, 4.6, 1.4]} intensity={0.68} color="#fffbeb" />
+      {/* 5. Rim Light Atas-Belakang (Garis lengkung bibir piring & kilau emas agar tegas di latar terang) */}
+      <pointLight position={[0, 4.8, -0.8]} intensity={0.75} color="#fffaf0" />
 
-      {/* 6. Under-Light Bawah (Detail cincin kaki piring bisque / foot ring saat Tampak Bawah) */}
-      <directionalLight position={[0, -4.2, 2.2]} intensity={0.48} color="#cbd5e1" />
+      {/* 6. Under-Light Bawah Hangat (Detail cincin kaki piring bisque & bayangan tepi bawah bibir) */}
+      <directionalLight position={[0, -4.2, 2.2]} intensity={0.42} color="#e5e0d8" />
 
       {/* 7. GPU-Baked Studio Softbox Lightformers (frames={1} = dihitung 1x saat muat, 0 beban per-frame) */}
-      <Environment resolution={256} frames={1} environmentIntensity={0.42}>
-        {/* Overhead Main Curved Softbox — menciptakan garis pantulan kaca glasir khas katalog porselen mewah */}
+      <Environment resolution={256} frames={1} environmentIntensity={0.44}>
+        {/* Overhead Main Curved Softbox — pantulan kaca glasir halus ala butik Nordik */}
         <Lightformer
           form="rect"
-          intensity={2.2}
+          intensity={2.15}
           color="#ffffff"
           scale={[6.5, 3.2, 1]}
           position={[1.2, 5.5, 2.2]}
@@ -107,25 +131,34 @@ export function StudioLighting() {
         {/* Left Rim Strip Softbox — mempertegas siluet lengkungan bibir kiri piring */}
         <Lightformer
           form="rect"
-          intensity={1.25}
-          color="#f8fafc"
+          intensity={1.15}
+          color="#fafaf9"
           scale={[1.8, 6.0, 1]}
           position={[-5.5, 1.8, 1.8]}
           rotation={[0, Math.PI / 2.4, 0]}
         />
-        {/* Right Warm Gold Reflector Strip — memunculkan kilau emas 24K & kedalaman dinding cekungan */}
+        {/* Right Warm Reflector Strip — memunculkan kilau emas 24K & kedalaman dinding cekungan */}
         <Lightformer
           form="rect"
-          intensity={1.45}
+          intensity={1.4}
           color="#fffbeb"
           scale={[2.2, 5.2, 1]}
           position={[5.5, 1.5, 1.5]}
           rotation={[0, -Math.PI / 2.4, 0]}
         />
+        {/* Subtle Warm-Stone Negative Bounce — memberi definisi tepi piring putih di latar terang */}
+        <Lightformer
+          form="rect"
+          intensity={0.22}
+          color="#d6d3d1"
+          scale={[4.0, 6.0, 1]}
+          position={[-6.0, -1.5, -2.5]}
+          rotation={[0, Math.PI / 3, 0]}
+        />
         {/* Front-Top Diffuser — menjaga permukaan glasir depan tetap hidup tanpa silau berlebih */}
         <Lightformer
           form="ring"
-          intensity={0.55}
+          intensity={0.52}
           color="#ffffff"
           scale={3.5}
           position={[-1.5, 3.2, 4.5]}
@@ -134,8 +167,8 @@ export function StudioLighting() {
         {/* Bottom Studio Table Bounce — pantulan lembut pada bagian bawah piring */}
         <Lightformer
           form="ring"
-          intensity={0.4}
-          color="#e2e8f0"
+          intensity={0.38}
+          color="#e7e5e4"
           scale={7}
           position={[0, -5.0, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
@@ -145,7 +178,7 @@ export function StudioLighting() {
   );
 }
 
-// Studio Floor Shadow positioned safely on the studio floor below the subject (never overlaps the plate)
+// Studio Floor Shadow: Very soft, thin, diffuse warm-stone contact shadow for bright Scandinavian studio
 export function StudioFloorShadow({
   shadowMeshRef,
   outerRadius = 1.35,
@@ -163,14 +196,14 @@ export function StudioFloorShadow({
     if (!ctx) return null;
 
     const center = size / 2;
-    // Dual-zone radial gradient: dense ambient occlusion core + soft studio spotlight penumbra
+    // Ultra-soft, wide diffuse contact shadow in warm stone charcoal (no harsh dark edges)
     const grad = ctx.createRadialGradient(center, center, 0, center, center, center);
-    grad.addColorStop(0, 'rgba(0, 0, 0, 0.92)');
-    grad.addColorStop(0.18, 'rgba(0, 0, 0, 0.78)');
-    grad.addColorStop(0.42, 'rgba(0, 0, 0, 0.42)');
-    grad.addColorStop(0.68, 'rgba(0, 0, 0, 0.14)');
-    grad.addColorStop(0.88, 'rgba(0, 0, 0, 0.03)');
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    grad.addColorStop(0, 'rgba(28, 25, 23, 0.22)');
+    grad.addColorStop(0.20, 'rgba(41, 37, 36, 0.14)');
+    grad.addColorStop(0.45, 'rgba(68, 64, 60, 0.065)');
+    grad.addColorStop(0.72, 'rgba(87, 83, 78, 0.02)');
+    grad.addColorStop(0.90, 'rgba(87, 83, 78, 0.004)');
+    grad.addColorStop(1, 'rgba(87, 83, 78, 0)');
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
@@ -193,14 +226,14 @@ export function StudioFloorShadow({
       ref={shadowMeshRef}
       position={[0, -1.40, -0.35]}
       rotation={[-Math.PI / 2, 0, 0]}
-      scale={[2.35 * shadowScale, 1.42 * shadowScale, 1]}
+      scale={[2.80 * shadowScale, 1.75 * shadowScale, 1]}
       renderOrder={-1}
     >
       <planeGeometry args={[1, 1]} />
       <meshBasicMaterial
         map={shadowTexture}
         transparent={true}
-        opacity={0.84}
+        opacity={0.85}
         depthWrite={false}
         depthTest={true}
       />
@@ -451,8 +484,8 @@ export function PlateSubjectRotator({
       if (shadowMeshRef.current) {
         const tiltFactor = Math.abs(Math.sin(currentRot.current.x));
         const shadowScale = (outerRadius || 1.35) / 1.35;
-        const scaleZ = (1.42 - tiltFactor * 0.45) * shadowScale;
-        const scaleX = 2.35 * shadowScale;
+        const scaleZ = (1.75 - tiltFactor * 0.45) * shadowScale;
+        const scaleX = 2.80 * shadowScale;
         shadowMeshRef.current.scale.set(scaleX, scaleZ, 1);
       }
     }
@@ -530,19 +563,19 @@ export default function PlateCanvas({
     <div className="relative w-full h-full min-h-[340px] select-none">
       {/* Fallback overlay if mobile OS forcibly reclaimed WebGL memory */}
       {contextLost && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xl">
-          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 mb-3 text-xl">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-white/95 backdrop-blur-md rounded-2xl border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="w-12 h-12 rounded-full bg-stone-100 border border-stone-200/80 flex items-center justify-center text-stone-700 mb-3 text-xl">
             ⚡
           </div>
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
+          <h3 className="text-sm font-semibold text-[#1C1917] mb-1 tracking-wide">
             Studio 3D Siap Dimuat Ulang
           </h3>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 max-w-xs leading-relaxed">
+          <p className="text-xs text-stone-500 mb-4 max-w-xs leading-relaxed">
             Browser ponsel Anda sempat menghemat memori grafis (WebGL). Ketuk tombol di bawah untuk menyegarkan tampilan 3D.
           </p>
           <button
             onClick={handleReloadCanvas}
-            className="py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
+            className="py-2.5 px-5 rounded-xl bg-[#1C1917] hover:bg-stone-800 text-white font-medium text-xs shadow-sm active:scale-95 transition-all duration-200 cursor-pointer"
           >
             Segarkan Studio 3D
           </button>
@@ -578,6 +611,7 @@ export default function PlateCanvas({
         }}
         dpr={[1, 1.5]}
       >
+        <color attach="background" args={['#F4F3F0']} />
         <AdaptiveDpr pixelated={false} />
         <Suspense fallback={null}>
           {/* Rock-solid, fixed studio photography backdrop */}

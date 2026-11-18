@@ -358,10 +358,14 @@ export default function PlatePreview({
             </div>
 
             {/* Main Stage */}
-            <div className="relative w-full h-[420px] bg-[#111318] rounded-2xl border border-zinc-700/60 overflow-hidden flex items-center justify-center">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_70%_at_50%_46%,_#2e3442_0%,_#1c202a_48%,_#111319_80%,_#090a0d_100%)] pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#08090d]/90 via-[#0e1015]/40 to-transparent pointer-events-none" />
-              <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(0,0,0,0.7)] pointer-events-none" />
+            <div className={`relative w-full h-[420px] rounded-2xl border overflow-hidden flex items-center justify-center ${viewMode === '3d' ? 'bg-[#F4F3F0] border-stone-200/80' : 'bg-[#111318] border-zinc-700/60'}`}>
+              {viewMode !== '3d' && (
+                <>
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_70%_at_50%_46%,_#2e3442_0%,_#1c202a_48%,_#111319_80%,_#090a0d_100%)] pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#08090d]/90 via-[#0e1015]/40 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(0,0,0,0.7)] pointer-events-none" />
+                </>
+              )}
               {viewMode === '3d' ? (
                 /* 1. Real 1:1 Three.js 3D Studio Canvas */
                 <Plate3DViewer

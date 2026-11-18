@@ -61,31 +61,28 @@ export default function Plate3DViewer({
 
   return (
     <div
-      className={`relative w-full h-full min-h-[440px] flex flex-col items-center select-none rounded-2xl overflow-hidden border border-zinc-700/60 shadow-2xl bg-[#0e1015] bg-[url('/studio-dark-backdrop.jpg')] bg-cover bg-center ${className}`}
+      className={`relative w-full h-full min-h-[440px] flex flex-col items-center select-none rounded-2xl overflow-hidden border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-[#F4F3F0] ${className}`}
     >
-      {/* Subtle perimeter vignette to frame the 3D studio */}
-      <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(0,0,0,0.7)] pointer-events-none z-10" />
-
       {/* Floating Status Badge Top Left */}
       <div className="absolute top-4 left-4 z-20 flex items-center gap-2 pointer-events-none">
-        <div className="px-3.5 py-1.5 rounded-full bg-[#161a22]/85 backdrop-blur-md border border-white/10 shadow-lg flex items-center gap-2 text-xs font-semibold text-white">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+        <div className="px-3.5 py-1.5 rounded-full bg-white/85 backdrop-blur-md border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center gap-2 text-xs font-medium text-[#1C1917]">
+          <div className="w-2 h-2 rounded-full bg-[#6B7F6E]" />
           <span>Studio 3D Kalibrasi Porselen (1:1)</span>
         </div>
       </div>
 
-      {/* Camera Angle & Control Bar Bottom Center (Matching ViewportControls & calibrated for clear depth) */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#161a22]/90 backdrop-blur-xl border border-white/10 shadow-2xl overflow-x-auto max-w-[95%]">
+      {/* Camera Angle & Control Bar Bottom Center */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 p-1.5 rounded-2xl bg-white/85 backdrop-blur-xl border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-x-auto max-w-[95%]">
         <button
           type="button"
           onClick={() => {
             setCameraPreset('perspective');
             setAutoRotate(false);
           }}
-          className={`py-1.5 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`py-1.5 px-3.5 rounded-xl text-xs font-medium transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             cameraPreset === 'perspective' && !autoRotate
-              ? 'bg-amber-400 text-zinc-950 shadow-md shadow-amber-400/20'
-              : 'text-zinc-300 hover:text-white hover:bg-white/10'
+              ? 'bg-[#1C1917] text-white shadow-xs'
+              : 'text-stone-600 hover:text-[#1C1917] hover:bg-stone-100/80'
           }`}
         >
           <Compass className="w-3.5 h-3.5" />
@@ -98,10 +95,10 @@ export default function Plate3DViewer({
             setCameraPreset('top');
             setAutoRotate(false);
           }}
-          className={`py-1.5 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`py-1.5 px-3.5 rounded-xl text-xs font-medium transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             cameraPreset === 'top' && !autoRotate
-              ? 'bg-amber-400 text-zinc-950 shadow-md shadow-amber-400/20'
-              : 'text-zinc-300 hover:text-white hover:bg-white/10'
+              ? 'bg-[#1C1917] text-white shadow-xs'
+              : 'text-stone-600 hover:text-[#1C1917] hover:bg-stone-100/80'
           }`}
         >
           <Eye className="w-3.5 h-3.5" />
@@ -114,10 +111,10 @@ export default function Plate3DViewer({
             setCameraPreset('bottom');
             setAutoRotate(false);
           }}
-          className={`py-1.5 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`py-1.5 px-3.5 rounded-xl text-xs font-medium transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             cameraPreset === 'bottom' && !autoRotate
-              ? 'bg-amber-400 text-zinc-950 shadow-md shadow-amber-400/20'
-              : 'text-zinc-300 hover:text-white hover:bg-white/10'
+              ? 'bg-[#1C1917] text-white shadow-xs'
+              : 'text-stone-600 hover:text-[#1C1917] hover:bg-stone-100/80'
           }`}
         >
           <FlipVertical className="w-3.5 h-3.5" />
@@ -130,25 +127,25 @@ export default function Plate3DViewer({
             setCameraPreset('close-up');
             setAutoRotate(false);
           }}
-          className={`py-1.5 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`py-1.5 px-3.5 rounded-xl text-xs font-medium transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             cameraPreset === 'close-up' && !autoRotate
-              ? 'bg-amber-400 text-zinc-950 shadow-md shadow-amber-400/20'
-              : 'text-zinc-300 hover:text-white hover:bg-white/10'
+              ? 'bg-[#1C1917] text-white shadow-xs'
+              : 'text-stone-600 hover:text-[#1C1917] hover:bg-stone-100/80'
           }`}
         >
           <ZoomIn className="w-3.5 h-3.5" />
           <span>Detail Bibir</span>
         </button>
 
-        <div className="w-[1px] h-4 bg-zinc-700 mx-1 shrink-0" />
+        <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
         <button
           type="button"
           onClick={() => setAutoRotate((prev) => !prev)}
-          className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+          className={`p-1.5 rounded-xl transition-all duration-200 cursor-pointer ${
             autoRotate
-              ? 'bg-amber-400/30 text-amber-300 border border-amber-500/40'
-              : 'text-zinc-400 hover:text-white hover:bg-white/10'
+              ? 'bg-stone-200/80 text-[#1C1917] border border-stone-300/80'
+              : 'text-stone-500 hover:text-[#1C1917] hover:bg-stone-100/80'
           }`}
           title={autoRotate ? 'Hentikan Putar Otomatis' : 'Putar Otomatis 360°'}
         >
@@ -158,7 +155,7 @@ export default function Plate3DViewer({
         <button
           type="button"
           onClick={handleCapture}
-          className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+          className="p-1.5 rounded-xl text-stone-500 hover:text-[#1C1917] hover:bg-stone-100/80 transition-all duration-200 cursor-pointer"
           title="Ambil Foto 3D Studio Ultra HD (2048×2048 px)"
         >
           <Camera className="w-4 h-4" />
@@ -167,8 +164,8 @@ export default function Plate3DViewer({
 
       {/* Top Right Guidance */}
       <div className="absolute top-4 right-4 z-20 pointer-events-none hidden sm:block">
-        <div className="px-3.5 py-1.5 rounded-full bg-[#161a22]/85 backdrop-blur-md border border-white/10 shadow-lg text-zinc-300 text-[11px] font-medium">
-          🖱️ Geser untuk Memutar • Scroll untuk Zoom
+        <div className="px-3.5 py-1.5 rounded-full bg-white/85 backdrop-blur-md border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-stone-600 text-[11px] font-medium tracking-wide">
+          Geser untuk Memutar • Scroll untuk Zoom
         </div>
       </div>
 
@@ -186,6 +183,7 @@ export default function Plate3DViewer({
           }}
           dpr={[1, 1.5]}
         >
+          <color attach="background" args={['#F4F3F0']} />
           <AdaptiveDpr pixelated={false} />
           <Suspense fallback={null}>
             {/* Same photography backdrop */}

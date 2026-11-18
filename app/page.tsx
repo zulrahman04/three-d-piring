@@ -13,12 +13,12 @@ import { usePlateStore } from '@/store/usePlateStore';
 const PlateCanvas = dynamic(() => import('@/components/3d/PlateCanvas'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[450px] flex flex-col items-center justify-center bg-zinc-100/50 dark:bg-zinc-900/50 rounded-3xl">
-      <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-3" />
-      <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
+    <div className="w-full h-full min-h-[450px] flex flex-col items-center justify-center bg-[#FBFBFA] border border-stone-200/80 rounded-2xl">
+      <Loader2 className="w-8 h-8 text-stone-600 animate-spin mb-3" />
+      <p className="text-sm font-medium text-[#1C1917] tracking-wide">
         Menyiapkan Studio 3D Keramik...
       </p>
-      <p className="text-xs text-zinc-400 mt-1">Memuat pencahayaan & geometri porselen</p>
+      <p className="text-xs text-stone-400 mt-1">Memuat pencahayaan &amp; geometri porselen</p>
     </div>
   ),
 });
@@ -77,21 +77,21 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 text-zinc-900">
+    <div className="flex flex-col min-h-screen bg-[#F4F3F0] text-[#1C1917]">
       {/* Top Header Navbar */}
       <Navbar onTakeSnapshot={handleTakeSnapshot} />
 
       {/* Mobile Sticky Quick Jump Bar */}
-      <div className="lg:hidden sticky top-16 z-20 p-2.5 bg-white/90 backdrop-blur-md border-b border-zinc-200 flex items-center justify-center gap-2">
+      <div className="lg:hidden sticky top-16 z-20 p-2.5 bg-white/85 backdrop-blur-md border-b border-stone-200/80 flex items-center justify-center gap-2">
         <button
           onClick={() => {
             setMobileTab('canvas');
             document.getElementById('studio-canvas')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer ${
             mobileTab === 'canvas'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'bg-zinc-100 text-zinc-600 hover:text-zinc-900'
+              ? 'bg-[#1C1917] text-white shadow-xs'
+              : 'bg-stone-100 text-stone-600 hover:text-[#1C1917]'
           }`}
         >
           <Eye className="w-3.5 h-3.5" />
@@ -103,10 +103,10 @@ export default function Home() {
             setMobileTab('controls');
             document.getElementById('customizer-panel')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer ${
             mobileTab === 'controls'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'bg-zinc-100 text-zinc-600 hover:text-zinc-900'
+              ? 'bg-[#1C1917] text-white shadow-xs'
+              : 'bg-stone-100 text-stone-600 hover:text-[#1C1917]'
           }`}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -119,11 +119,8 @@ export default function Home() {
         {/* Left Section: 3D Studio Canvas Viewport (7 cols on lg, 8 on xl) - NEVER uses display:none */}
         <section
           id="studio-canvas"
-          className="relative lg:col-span-7 xl:col-span-8 flex flex-col rounded-3xl overflow-hidden border border-zinc-700/60 shadow-2xl bg-[#0e1015] bg-[url('/studio-dark-backdrop.jpg')] bg-cover bg-center lg:sticky lg:top-20 lg:h-[calc(100vh-6.5rem)] lg:max-h-[660px] lg:min-h-[480px]"
+          className="relative lg:col-span-7 xl:col-span-8 flex flex-col rounded-2xl overflow-hidden border border-stone-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-[#F4F3F0] lg:sticky lg:top-20 lg:h-[calc(100vh-6.5rem)] lg:max-h-[660px] lg:min-h-[480px]"
         >
-          {/* Subtle perimeter vignette to frame the 3D studio */}
-          <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(0,0,0,0.7)] pointer-events-none z-10" />
-
           {/* Interactive 3D Canvas */}
           <div className="relative flex-1 w-full h-[360px] sm:h-[440px] lg:h-full min-h-[340px]">
             <PlateCanvas onRegisterCapture={handleRegisterCapture} />
