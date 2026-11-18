@@ -46,9 +46,36 @@ export type DesignPreset = {
   dataUrl: string;
 };
 
+export type CartItem = {
+  id: string;
+  selectedSize: PlateSize;
+  plateColor: string;
+  plateFinish: PlateFinish;
+  rimTrim: RimTrim;
+  rimTrimCustomColor: string;
+  rimPattern: RimPattern;
+  customRimPatternUrl: string | null;
+  customRimPatternName: string | null;
+  customRimPatternRepeat: number;
+  customRimPatternMode: 'repeat' | 'full';
+  printCoverage: 'center' | 'full';
+  logoPlacement: LogoPlacement;
+  designUrl: string | null;
+  designName: string | null;
+  designScale: number;
+  designRotation: number;
+  designOffsetX: number;
+  designOffsetY: number;
+  designOpacity: number;
+  snapshotUrl: string | null;
+  quantity: number;
+};
+
 export interface PlateCustomizationState {
   // Plate Appearance & Geometry (Flat Master via selectedSize)
   availableSizes: PlateSize[];
+  availableColors: PlateColor[];
+  availablePresets: DesignPreset[];
   selectedSize: PlateSize;
   plateColor: string;
   plateFinish: PlateFinish;
@@ -71,13 +98,15 @@ export interface PlateCustomizationState {
   designOffsetY: number; // -0.5 to 0.5
   designOpacity: number; // 0.2 to 1.0
 
-  // 3D Canvas Interaction
+  // 3D Canvas Interaction & Guides
   autoRotate: boolean;
   cameraPreset: 'perspective' | 'top' | 'close-up' | 'bottom';
+  showSafeZoneGuides: boolean;
   isCapturing: boolean;
   capturedSnapshot: string | null;
 
-  // Order & Modal
+  // Cart, Order & Modal
+  cart: CartItem[];
   isOrderModalOpen: boolean;
   orderQuantity: number;
 
@@ -85,6 +114,7 @@ export interface PlateCustomizationState {
   setSize: (size: PlateSize) => void;
   setAvailableSizes: (sizes: PlateSize[]) => void;
   loadMasterSizes: () => Promise<void>;
+  loadMasterCatalog: () => Promise<void>;
   setPlateColor: (color: string) => void;
   setPlateFinish: (finish: PlateFinish) => void;
   setRimTrim: (rim: RimTrim) => void;
@@ -106,17 +136,26 @@ export interface PlateCustomizationState {
   setAutoRotate: (autoRotate: boolean) => void;
   toggleAutoRotate: () => void;
   setCameraPreset: (preset: 'perspective' | 'top' | 'close-up' | 'bottom') => void;
+  setShowSafeZoneGuides: (show: boolean) => void;
   setCapturedSnapshot: (dataUrl: string | null) => void;
   setIsCapturing: (capturing: boolean) => void;
+  addToCart: (snapshotUrl?: string | null, quantity?: number) => void;
+  updateCartItemQuantity: (id: string, quantity: number) => void;
+  removeCartItem: (id: string) => void;
+  clearCart: () => void;
+  restoreDraft: () => void;
   setOrderModalOpen: (open: boolean) => void;
   setOrderQuantity: (quantity: number) => void;
   calculateTotalPrice: () => {
     unitBasePrice: number;
     printFee: number;
     rimTrimFee: number;
-    rimPatternFee?: number;
+    rimPatternFee: number;
     unitTotal: number;
     quantity: number;
+    subtotalBeforeDiscount: number;
+    discountPercent: number;
+    discountAmount: number;
     grandTotal: number;
   };
 }

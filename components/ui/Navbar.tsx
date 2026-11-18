@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Sparkles,
   RotateCw,
@@ -10,6 +11,8 @@ import {
   HelpCircle,
   ChevronDown,
   Download,
+  PackageSearch,
+  ShoppingCart,
 } from 'lucide-react';
 import { usePlateStore } from '@/store/usePlateStore';
 
@@ -18,7 +21,7 @@ export default function Navbar({
 }: {
   onTakeSnapshot?: (width?: number, height?: number, label?: string) => void;
 }) {
-  const { autoRotate, toggleAutoRotate, setCameraPreset } = usePlateStore();
+  const { autoRotate, toggleAutoRotate, cart, setOrderModalOpen } = usePlateStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -161,6 +164,31 @@ export default function Navbar({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Track Order Link */}
+          <Link
+            href="/track"
+            title="Lacak Status Pesanan & Upload Bukti Bayar"
+            className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:text-indigo-600 transition-all"
+          >
+            <PackageSearch className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="hidden sm:inline">Lacak Pesanan</span>
+          </Link>
+
+          {/* Cart Button when multi-item cart has items */}
+          {cart.length > 0 && (
+            <button
+              onClick={() => setOrderModalOpen(true)}
+              title="Buka Keranjang Pesanan"
+              className="relative flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all cursor-pointer"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Keranjang</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-white text-indigo-700 text-[10px] font-black">
+                {cart.length}
+              </span>
+            </button>
           )}
 
           {/* Guarantee Badge */}

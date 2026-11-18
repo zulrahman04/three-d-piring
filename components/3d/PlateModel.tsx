@@ -440,10 +440,13 @@ export interface PlateModelProps {
   designOpacity?: number;
   selectedSize?: Partial<PlateSize> | PlateSize;
   diameterCm?: number;
+  showSafeZoneGuides?: boolean;
 }
 
 export default function PlateModel(props?: PlateModelProps) {
   const store = usePlateStore();
+  const isViewerOverride = Boolean(props && Object.keys(props).length > 0);
+  const showSafeZoneGuides = props?.showSafeZoneGuides ?? (isViewerOverride ? false : store.showSafeZoneGuides);
   const selectedSize = props?.selectedSize ?? store.selectedSize;
   const plateColor = props?.plateColor ?? store.plateColor;
   const plateFinish = props?.plateFinish ?? store.plateFinish;
@@ -479,7 +482,15 @@ export default function PlateModel(props?: PlateModelProps) {
   // 2. Generator Geometri Parametrik: Anatomi Penampang Piring Porselen Asli
   //    Dengan orientasi normal keluar (Outward Normals), Single-Pass Top Surface (tanpa overdraw),
   //    serta Cincin Kaki Bawah Tanpa Glasir (Unglazed Bisque Foot Ring) seperti porselen hotel asli.
-  const { plateUndersideGeometry, topSurfaceGeometry, footRingBisqueGeometry, rimApexY } = useMemo(() => {
+  const {
+    plateUndersideGeometry,
+    topSurfaceGeometry,
+    footRingBisqueGeometry,
+    rimApexY,
+    safeZoneFloorR,
+    safeZoneWellBottomY,
+    safeZoneRimMidR,
+  } = useMemo(() => {
     const wellRadius = outerRadius * wellRatio;
     const footRingRadius = outerRadius * footRingRadiusRatio;
 
@@ -654,6 +665,9 @@ export default function PlateModel(props?: PlateModelProps) {
       topSurfaceGeometry: topGeom,
       footRingBisqueGeometry: bisqueGeom,
       rimApexY: rimTopY,
+      safeZoneFloorR: floorR,
+      safeZoneWellBottomY: wellBottomY,
+      safeZoneRimMidR: (outerRadius * 0.93 + Math.max(wellRadius * 1.04, outerRadius * 0.72)) / 2,
     };
   }, [outerRadius, wellRatio, wellDepth, thickness, footRingRadiusRatio]);
 
@@ -1180,6 +1194,28 @@ export default function PlateModel(props?: PlateModelProps) {
             envMapIntensity={1.45}
           />
         </mesh>
+      )}
+      {/* 5. Optional 3D Safe-Zone Guides (Batas area datar tengah & titik Jam 12) */}
+      {showSafeZoneGuides && (
+        <group name="safe-zone-guides">
+          {/* Inner Flat Basin Safe-Zone Ring */}
+          <mesh position={[0, safeZoneWellBottomY + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[safeZoneFloorR - 0.006, safeZoneFloorR, 72]} />
+            <meshBasicMaterial color="#4f46e5" transparent opacity={0.75} depthTest={false} />
+          </mesh>
+
+          {/* Outer Rim Safe Boundary Ring */}
+          <mesh position={[0, rimApexY + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[outerRadius * 0.93 - 0.004, outerRadius * 0.93, 96]} />
+            <meshBasicMaterial color="#0ea5e9" transparent opacity={0.45} depthTest={false} />
+          </mesh>
+
+          {/* 12 O'Clock (Jam 12) Target Marker for Top-Rim Logo */}
+          <mesh position={[0, rimApexY - 0.015, -safeZoneRimMidR]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.022, 0.036, 32]} />
+            <meshBasicMaterial color="#f59e0b" transparent opacity={0.9} depthTest={false} />
+          </mesh>
+        </group>
       )}
     </group>
   );

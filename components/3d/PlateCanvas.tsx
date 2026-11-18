@@ -247,12 +247,15 @@ export function PlateSubjectRotator({
       const persCamera = camera as THREE.PerspectiveCamera;
       const originalAspect = persCamera.aspect;
 
-      // Preserve current user rotation
+      // Preserve current user rotation & hide safe-zone guides during capture
       const hadGroup = Boolean(groupRef.current);
       const prevRotX = groupRef.current ? groupRef.current.rotation.x : currentRot.current.x;
       const prevRotY = groupRef.current ? groupRef.current.rotation.y : currentRot.current.y;
+      const guidesObj = scene.getObjectByName('safe-zone-guides');
+      const prevGuidesVisible = guidesObj ? guidesObj.visible : true;
 
       try {
+        if (guidesObj) guidesObj.visible = false;
         // If plate is tilted too edge-on (< 0.5 rad) or upside down, temporarily set to signature 3D presentation angle
         if (groupRef.current && (prevRotX < 0.55 || Math.abs(prevRotX) < 0.3)) {
           groupRef.current.rotation.x = 1.15;
@@ -272,6 +275,7 @@ export function PlateSubjectRotator({
         console.warn('Canvas high-res capture note:', err);
         return gl.domElement.toDataURL('image/png', 0.95);
       } finally {
+        if (guidesObj) guidesObj.visible = prevGuidesVisible;
         if (hadGroup && groupRef.current) {
           groupRef.current.rotation.x = prevRotX;
           groupRef.current.rotation.y = prevRotY;

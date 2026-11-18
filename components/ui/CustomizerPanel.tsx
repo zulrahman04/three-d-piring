@@ -15,7 +15,9 @@ import {
   Check,
   RefreshCw,
   ShoppingBag,
+  ShoppingCart,
   Pipette,
+  Crosshair,
 } from 'lucide-react';
 import { usePlateStore } from '@/store/usePlateStore';
 import {
@@ -28,21 +30,28 @@ import {
   SAMPLE_RIM_MOTIFS,
 } from '@/constants/presets';
 import { PlateFinish, RimTrim, RimPattern, LogoPlacement } from '@/types/plate';
+import { compressUploadedImage } from '@/lib/imageCompress';
 
 export default function CustomizerPanel({
   onCheckout,
+  onAddToCart,
 }: {
   onCheckout: () => void;
+  onAddToCart?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<'design' | 'plate' | 'adjust'>('design');
   const [isDragging, setIsDragging] = useState(false);
+  const [addedToCartToast, setAddedToCartToast] = useState(false);
   const [rimPatternCategory, setRimPatternCategory] = useState<'Semua' | 'Garis Logam' | 'Batik Nusantara' | 'Klasik & Mewah' | 'Kustom'>('Semua');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const rimPatternFileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     availableSizes,
-    loadMasterSizes,
+    availableColors,
+    availablePresets,
+    loadMasterCatalog,
+    restoreDraft,
     selectedSize,
     setSize,
     plateColor,
@@ -79,10 +88,15 @@ export default function CustomizerPanel({
     designOffsetY,
     setDesignOffset,
     resetDesignTransforms,
+    showSafeZoneGuides,
+    setShowSafeZoneGuides,
+    cart,
     calculateTotalPrice,
   } = usePlateStore();
 
   const pricing = calculateTotalPrice();
+  const activeColors = availableColors && availableColors.length > 0 ? availableColors : PLATE_COLORS;
+  const activePresets = availablePresets && availablePresets.length > 0 ? availablePresets : DESIGN_PRESETS;
 
   // Local text states for flexible HEX color inputs
   const [customPlateHex, setCustomPlateHex] = useState(plateColor);
@@ -97,8 +111,10 @@ export default function CustomizerPanel({
   }, [rimTrimCustomColor]);
 
   useEffect(() => {
-    loadMasterSizes();
-  }, [loadMasterSizes]);
+    loadMasterCatalog().then(() => {
+      restoreDraft();
+    });
+  }, [loadMasterCatalog, restoreDraft]);
 
   const handlePlateHexChange = (val: string) => {
     setCustomPlateHex(val);
@@ -126,8 +142,8 @@ export default function CustomizerPanel({
     setRimTrimCustomColor(e.target.value);
   };
 
-  // Handle file upload from user device as persistent Data URL
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file upload from user device with automatic compression for optimal 3D & DB size
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -136,47 +152,44 @@ export default function CustomizerPanel({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setDesignImage(reader.result, file.name);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleCustomRimPatternUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      alert('Mohon pilih file gambar yang valid (PNG, JPEG, WEBP, atau SVG).');
-      return;
+    try {
+      const optimizedUrl = await compressUploadedImage(file, 1600, 0.88);
+      setDesignImage(optimizedUrl, file.name);
+    } catch {
+      alert('Gagal memproses file gambar.');
     }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setCustomRimPatternUrl(reader.result, file.name);
-      }
-    };
-    reader.readAsDataURL(file);
-    // Reset file input so re-selecting same file triggers onChange
     e.target.value = '';
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleCustomRimPatternUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file gambar yang valid (PNG, JPEG, WEBP, atau SVG).');
+      return;
+    }
+
+    try {
+      const optimizedUrl = await compressUploadedImage(file, 1200, 0.88);
+      setCustomRimPatternUrl(optimizedUrl, file.name);
+    } catch {
+      alert('Gagal memproses file gambar motif.');
+    }
+    e.target.value = '';
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setDesignImage(reader.result, file.name);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const optimizedUrl = await compressUploadedImage(file, 1600, 0.88);
+        setDesignImage(optimizedUrl, file.name);
+      } catch {
+        alert('Gagal memproses file gambar.');
+      }
     }
   };
 
@@ -307,7 +320,7 @@ export default function CustomizerPanel({
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
-                {DESIGN_PRESETS.map((preset) => {
+                {activePresets.map((preset) => {
                   const isSelected = designName === preset.name;
                   return (
                     <button
@@ -483,13 +496,13 @@ export default function CustomizerPanel({
                   Warna Piring Keramik
                 </label>
                 <span className="text-xs text-zinc-500 font-medium">
-                  {PLATE_COLORS.find((c) => c.hex.toLowerCase() === plateColor.toLowerCase())?.name || 'Warna Kustom'}
+                  {activeColors.find((c) => c.hex.toLowerCase() === plateColor.toLowerCase())?.name || 'Warna Kustom'}
                 </span>
               </div>
 
               {/* Preset Color Swatches */}
               <div className="grid grid-cols-7 gap-2">
-                {PLATE_COLORS.map((color) => {
+                {activeColors.map((color) => {
                   const isSelected = plateColor.toLowerCase() === color.hex.toLowerCase();
                   return (
                     <button
@@ -1150,6 +1163,31 @@ export default function CustomizerPanel({
                   />
                 </div>
 
+                {/* Safe-Zone Guide Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowSafeZoneGuides(!showSafeZoneGuides)}
+                  className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                    showSafeZoneGuides
+                      ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300'
+                      : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/40 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Crosshair className="w-4 h-4 text-indigo-500" />
+                    <span>Garis Bantu Area Cetak (Safe Zone 3D)</span>
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      showSafeZoneGuides
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+                    }`}
+                  >
+                    {showSafeZoneGuides ? 'AKTIF' : 'MATI'}
+                  </span>
+                </button>
+
                 {/* Reset Transforms */}
                 <button
                   onClick={resetDesignTransforms}
@@ -1176,17 +1214,44 @@ export default function CustomizerPanel({
           <div className="text-right text-[11px] text-zinc-400">
             <span>{selectedSize.name}</span>
             {rimTrim !== 'none' && <span> • Rim Trim</span>}
+            {cart.length > 0 && (
+              <p className="text-indigo-600 font-bold mt-0.5">
+                {cart.length} varian di keranjang
+              </p>
+            )}
           </div>
         </div>
 
-        <button
-          id="btn-checkout"
-          onClick={onCheckout}
-          className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer z-10"
-        >
-          <ShoppingBag className="w-4 h-4" />
-          <span>Pesan Sekarang / Checkout</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onAddToCart && (
+            <button
+              type="button"
+              onClick={() => {
+                onAddToCart();
+                setAddedToCartToast(true);
+                setTimeout(() => setAddedToCartToast(false), 1800);
+              }}
+              title="Tambahkan desain ini ke keranjang untuk pesan multi-varian"
+              className="py-3.5 px-3.5 rounded-2xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>{addedToCartToast ? 'Ditambah!' : '+ Keranjang'}</span>
+            </button>
+          )}
+
+          <button
+            id="btn-checkout"
+            onClick={onCheckout}
+            className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer z-10"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            <span>
+              {cart.length > 0
+                ? `Checkout Keranjang (${cart.length})`
+                : 'Pesan Sekarang / Checkout'}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

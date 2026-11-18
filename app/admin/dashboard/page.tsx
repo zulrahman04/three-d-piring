@@ -73,6 +73,7 @@ interface Order {
   grandTotal: string;
   paymentMethod: string;
   paymentStatus: string;
+  paymentProofUrl?: string | null;
   orderStatus: string;
   trackingNumber: string | null;
   createdAt: string;

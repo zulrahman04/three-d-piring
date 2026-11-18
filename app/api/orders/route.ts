@@ -1,15 +1,75 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { PlateFinish, RimTrim, PrintCoverage, PaymentMethod, PaymentStatus, OrderStatus, UserRole } from '@prisma/client';
+import { getAdminSession } from '@/lib/auth';
+import { calculatePlatePricing, getWholesaleDiscountPercent } from '@/lib/pricing';
+import {
+  PlateFinish,
+  RimTrim,
+  PrintCoverage,
+  PaymentMethod,
+  PaymentStatus,
+  OrderStatus,
+  UserRole,
+} from '@prisma/client';
+
+const finishMap: Record<string, PlateFinish> = {
+  glossy: PlateFinish.GLOSSY,
+  matte: PlateFinish.MATTE,
+  satin: PlateFinish.SATIN,
+};
+
+const rimMap: Record<string, RimTrim> = {
+  none: RimTrim.NONE,
+  gold: RimTrim.GOLD,
+  silver: RimTrim.SILVER,
+  'rose-gold': RimTrim.ROSE_GOLD,
+  rose_gold: RimTrim.ROSE_GOLD,
+  custom: RimTrim.CUSTOM,
+};
+
+const coverageMap: Record<string, PrintCoverage> = {
+  center: PrintCoverage.CENTER,
+  full: PrintCoverage.FULL,
+};
+
+const paymentMap: Record<string, PaymentMethod> = {
+  bca: PaymentMethod.BCA,
+  mandiri: PaymentMethod.MANDIRI,
+  qris: PaymentMethod.QRIS,
+  gopay: PaymentMethod.GOPAY,
+};
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { customer, customization, pricing, paymentMethod, orderNumber } = body;
+    const { customer, customization, pricing, items: rawItems, paymentMethod, orderNumber } = body;
 
     if (!customer?.email || !customer?.name) {
       return NextResponse.json(
         { error: 'Nama dan email pemesan wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    // Normalize single-item legacy payload or multi-item cart payload into a unified list
+    const incomingItems: Array<{ customization: any; quantity: number }> =
+      Array.isArray(rawItems) && rawItems.length > 0
+        ? rawItems.map((it: any) => ({
+            customization: it.customization || it,
+            quantity: Math.max(1, Math.floor(Number(it.quantity) || 1)),
+          }))
+        : customization
+        ? [
+            {
+              customization,
+              quantity: Math.max(1, Math.floor(Number(pricing?.quantity) || 1)),
+            },
+          ]
+        : [];
+
+    if (incomingItems.length === 0) {
+      return NextResponse.json(
+        { error: 'Minimal 1 item piring harus disertakan dalam pesanan' },
         { status: 400 }
       );
     }
@@ -29,108 +89,142 @@ export async function POST(req: Request) {
       },
     });
 
-    // Format enums safely
-    const finishMap: Record<string, PlateFinish> = {
-      glossy: PlateFinish.GLOSSY,
-      matte: PlateFinish.MATTE,
-      satin: PlateFinish.SATIN,
-    };
+    // 2. Resolve each item against authoritative DB Master data and compute server-side pricing
+    const totalQtyAcrossOrder = incomingItems.reduce((sum, it) => sum + it.quantity, 0);
+    const wholesaleDiscountPct = getWholesaleDiscountPercent(totalQtyAcrossOrder);
 
-    const rimMap: Record<string, RimTrim> = {
-      none: RimTrim.NONE,
-      gold: RimTrim.GOLD,
-      silver: RimTrim.SILVER,
-      rose_gold: RimTrim.ROSE_GOLD,
-      custom: RimTrim.CUSTOM,
-    };
+    let totalBasePriceSum = 0;
+    let totalPrintFeeSum = 0;
+    let totalRimTrimFeeSum = 0;
+    let subtotalBeforeDiscountSum = 0;
 
-    const coverageMap: Record<string, PrintCoverage> = {
-      center: PrintCoverage.CENTER,
-      full: PrintCoverage.FULL,
-    };
+    const preparedOrderItems: any[] = [];
 
-    const paymentMap: Record<string, PaymentMethod> = {
-      bca: PaymentMethod.BCA,
-      mandiri: PaymentMethod.MANDIRI,
-      qris: PaymentMethod.QRIS,
-      gopay: PaymentMethod.GOPAY,
-    };
+    for (const entry of incomingItems) {
+      const custInput = entry.customization;
+      const qty = entry.quantity;
 
-    // 2. Fetch Master Plate Size & Color from database as authoritative source of truth
-    let masterPlateSize = await prisma.plateSize.findUnique({
-      where: { id: customization.plateSize || 'dinner' },
-    });
+      let masterPlateSize = await prisma.plateSize.findUnique({
+        where: { id: custInput.plateSize || 'dinner' },
+      });
 
-    // Fallback to active master plate size in DB if id not found
-    if (!masterPlateSize) {
-      masterPlateSize = await prisma.plateSize.findFirst({
-        where: { isActive: true },
+      if (!masterPlateSize) {
+        masterPlateSize = await prisma.plateSize.findFirst({
+          where: { isActive: true },
+        });
+      }
+
+      if (!masterPlateSize) {
+        return NextResponse.json(
+          { error: 'Master ukuran piring tidak ditemukan di database' },
+          { status: 400 }
+        );
+      }
+
+      const masterPlateColor = custInput.plateColor
+        ? await prisma.plateColor.findFirst({
+            where: { hexCode: { equals: custInput.plateColor, mode: 'insensitive' } },
+          })
+        : null;
+
+      const plateSizeName = masterPlateSize.name;
+      const diameterCm = Number(masterPlateSize.diameterCm);
+      const plateColorName =
+        masterPlateColor?.name || custInput.plateColorName || 'Porcelain White';
+      const plateColorHex = custInput.plateColor || masterPlateColor?.hexCode || '#FAF7F2';
+
+      // Authoritative Server-Side Pricing Calculation
+      const itemPricing = calculatePlatePricing({
+        unitBasePrice: Number(masterPlateSize.basePrice),
+        hasDesign: Boolean(custInput.designImageUrl),
+        rimTrim: custInput.rimTrim || 'none',
+        rimPattern: custInput.rimPattern || 'none',
+        quantity: qty,
+      });
+
+      const lineSubtotalBeforeDiscount = itemPricing.unitTotal * qty;
+      totalBasePriceSum += itemPricing.unitBasePrice * qty;
+      totalPrintFeeSum += itemPricing.printFee * qty;
+      // Store combined rim trim + rim pattern fee in totalRimTrimFee for accurate accounting
+      totalRimTrimFeeSum += (itemPricing.rimTrimFee + itemPricing.rimPatternFee) * qty;
+      subtotalBeforeDiscountSum += lineSubtotalBeforeDiscount;
+
+      const geometrySnapshot = {
+        outerRadius: Number(masterPlateSize.outerRadius),
+        wellRatio: Number(masterPlateSize.wellRatio),
+        wellDepth: Number(masterPlateSize.wellDepth),
+        rimHeight: Number(masterPlateSize.rimHeight),
+        rimAngleDeg: Number(masterPlateSize.rimAngleDeg),
+        thickness: Number(masterPlateSize.thickness),
+        footRingRadiusRatio: Number(masterPlateSize.footRingRadiusRatio),
+      };
+
+      const savedCustomization = await prisma.plateCustomization.create({
+        data: {
+          userId: user.id,
+          plateSizeId: masterPlateSize.id,
+          plateColorHex,
+          plateFinish: finishMap[custInput.finish] || PlateFinish.GLOSSY,
+          rimTrim: rimMap[custInput.rimTrim] || RimTrim.NONE,
+          rimTrimCustomColor: custInput.rimTrimCustomColor || null,
+          printCoverage: coverageMap[custInput.printCoverage] || PrintCoverage.CENTER,
+          designImageUrl: custInput.designImageUrl || null,
+          designName: custInput.designName || 'Custom Artwork',
+          designScale: custInput.designScale ?? 1.0,
+          designRotation: custInput.designRotation ?? 0.0,
+          designOffsetX: custInput.designOffsetX ?? 0.0,
+          designOffsetY: custInput.designOffsetY ?? 0.0,
+          designOpacity: custInput.designOpacity ?? 1.0,
+          previewSnapshotUrl: custInput.snapshotUrl || null,
+          metadata: {
+            rimPattern: custInput.rimPattern || 'none',
+            rimPatternFee: itemPricing.rimPatternFee,
+            customRimPatternUrl: custInput.customRimPatternUrl || null,
+            customRimPatternName: custInput.customRimPatternName || null,
+            customRimPatternRepeat: custInput.customRimPatternRepeat || 24,
+            customRimPatternMode: custInput.customRimPatternMode || 'repeat',
+            logoPlacement: custInput.logoPlacement || 'center',
+            diameterCm,
+            plateSizeName,
+            geometrySnapshot,
+          },
+        },
+      });
+
+      const lineDiscount = Math.round(
+        (lineSubtotalBeforeDiscount * wholesaleDiscountPct) / 100
+      );
+
+      preparedOrderItems.push({
+        customizationId: savedCustomization.id,
+        plateSizeName,
+        diameterCm,
+        plateColorName,
+        plateColorHex,
+        plateFinish: finishMap[custInput.finish] || PlateFinish.GLOSSY,
+        rimTrimName: custInput.rimTrim || 'none',
+        rimTrimCustomHex: custInput.rimTrimCustomColor || null,
+        printCoverage: coverageMap[custInput.printCoverage] || PrintCoverage.CENTER,
+        designImageUrl: custInput.designImageUrl || null,
+        snapshotRenderUrl: custInput.snapshotUrl || '',
+        unitBasePrice: itemPricing.unitBasePrice,
+        unitPrintFee: itemPricing.printFee,
+        unitRimTrimFee: itemPricing.rimTrimFee + itemPricing.rimPatternFee,
+        unitTotalPrice: itemPricing.unitTotal,
+        quantity: qty,
+        subtotalPrice: Math.max(0, lineSubtotalBeforeDiscount - lineDiscount),
       });
     }
 
-    if (!masterPlateSize) {
-      return NextResponse.json(
-        { error: 'Master ukuran piring tidak ditemukan di database' },
-        { status: 400 }
-      );
-    }
+    const totalDiscountAmount = Math.round(
+      (subtotalBeforeDiscountSum * wholesaleDiscountPct) / 100
+    );
+    const serverGrandTotal = Math.max(0, subtotalBeforeDiscountSum - totalDiscountAmount);
 
-    const masterPlateColor = customization.plateColor
-      ? await prisma.plateColor.findFirst({
-          where: { hexCode: { equals: customization.plateColor, mode: 'insensitive' } },
-        })
-      : null;
-
-    const plateSizeName = masterPlateSize.name;
-    const diameterCm = Number(masterPlateSize.diameterCm);
-    const plateColorName = masterPlateColor?.name || customization.plateColorName || 'Porcelain White';
-    const plateColorHex = customization.plateColor || masterPlateColor?.hexCode || '#FAF7F2';
-
-    // Construct immutable CAD geometry snapshot directly from the Master table (100% Dynamic from Master)
-    const geometrySnapshot = {
-      outerRadius: Number(masterPlateSize.outerRadius),
-      wellRatio: Number(masterPlateSize.wellRatio),
-      wellDepth: Number(masterPlateSize.wellDepth),
-      rimHeight: Number(masterPlateSize.rimHeight),
-      rimAngleDeg: Number(masterPlateSize.rimAngleDeg),
-      thickness: Number(masterPlateSize.thickness),
-      footRingRadiusRatio: Number(masterPlateSize.footRingRadiusRatio),
-    };
-
-    // 3. Insert Customization with Master Snapshot
-    const savedCustomization = await prisma.plateCustomization.create({
-      data: {
-        userId: user.id,
-        plateSizeId: masterPlateSize?.id || customization.plateSize || 'dinner',
-        plateColorHex: plateColorHex,
-        plateFinish: finishMap[customization.finish] || PlateFinish.GLOSSY,
-        rimTrim: rimMap[customization.rimTrim] || RimTrim.NONE,
-        rimTrimCustomColor: customization.rimTrimCustomColor || null,
-        printCoverage: coverageMap[customization.printCoverage] || PrintCoverage.CENTER,
-        designImageUrl: customization.designImageUrl || null,
-        designName: customization.designName || 'Custom Artwork',
-        designScale: customization.designScale || 1.0,
-        designRotation: customization.designRotation || 0.0,
-        designOffsetX: customization.designOffsetX || 0.0,
-        designOffsetY: customization.designOffsetY || 0.0,
-        designOpacity: customization.designOpacity || 1.0,
-        previewSnapshotUrl: customization.snapshotUrl || null,
-        metadata: {
-          rimPattern: customization.rimPattern || 'none',
-          customRimPatternUrl: customization.customRimPatternUrl || null,
-          customRimPatternName: customization.customRimPatternName || null,
-          customRimPatternRepeat: customization.customRimPatternRepeat || 24,
-          customRimPatternMode: customization.customRimPatternMode || 'repeat',
-          logoPlacement: customization.logoPlacement || 'center',
-          diameterCm: diameterCm,
-          plateSizeName: plateSizeName,
-          geometrySnapshot: geometrySnapshot,
-        },
-      },
-    });
-
-    // 4. Create Order, Order Item & Initial Production Log
-    const finalOrderNumber = orderNumber || `CRX-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+    // 3. Create Order, Order Items & Initial Production Log
+    const finalOrderNumber =
+      orderNumber ||
+      `CRX-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
     const order = await prisma.order.create({
       data: {
@@ -144,44 +238,28 @@ export async function POST(req: Request) {
         postalCode: customer.postalCode || '12345',
         specialNotes: customer.notes || null,
 
-        totalBasePrice: (pricing.unitBasePrice || 125000) * (pricing.quantity || 1),
-        totalPrintFee: (pricing.printFee || 0) * (pricing.quantity || 1),
-        totalRimTrimFee: (pricing.rimTrimFee || 0) * (pricing.quantity || 1),
+        totalBasePrice: totalBasePriceSum,
+        totalPrintFee: totalPrintFeeSum,
+        totalRimTrimFee: totalRimTrimFeeSum,
         shippingCost: 0,
-        discountAmount: 0,
-        grandTotal: pricing.grandTotal,
+        discountAmount: totalDiscountAmount,
+        grandTotal: serverGrandTotal,
 
         paymentMethod: paymentMap[paymentMethod] || PaymentMethod.QRIS,
         paymentStatus: PaymentStatus.UNPAID,
         orderStatus: OrderStatus.PENDING_PAYMENT,
 
         items: {
-          create: {
-            customizationId: savedCustomization.id,
-            plateSizeName: plateSizeName,
-            diameterCm: diameterCm,
-            plateColorName: plateColorName,
-            plateColorHex: plateColorHex,
-            plateFinish: finishMap[customization.finish] || PlateFinish.GLOSSY,
-            rimTrimName: customization.rimTrim || 'none',
-            rimTrimCustomHex: customization.rimTrimCustomColor || null,
-            printCoverage: coverageMap[customization.printCoverage] || PrintCoverage.CENTER,
-            designImageUrl: customization.designImageUrl || null,
-            snapshotRenderUrl: customization.snapshotUrl || '',
-
-            unitBasePrice: pricing.unitBasePrice || 125000,
-            unitPrintFee: pricing.printFee || 0,
-            unitRimTrimFee: pricing.rimTrimFee || 0,
-            unitTotalPrice: pricing.unitTotal,
-            quantity: pricing.quantity || 1,
-            subtotalPrice: pricing.grandTotal,
-          },
+          create: preparedOrderItems,
         },
         logs: {
           create: {
             stage: OrderStatus.PENDING_PAYMENT,
             title: 'Pesanan Baru Diterima',
-            description: 'Pesanan berhasil dibuat oleh customer dan menunggu pembayaran.',
+            description:
+              wholesaleDiscountPct > 0
+                ? `Pesanan dibuat (${totalQtyAcrossOrder} pcs, diskon grosir ${wholesaleDiscountPct}%) dan menunggu pembayaran.`
+                : 'Pesanan berhasil dibuat oleh customer dan menunggu pembayaran.',
           },
         },
       },
@@ -198,7 +276,9 @@ export async function POST(req: Request) {
         name: user.fullName,
         email: user.email,
       },
-      totalPrice: order.grandTotal,
+      totalPrice: Number(order.grandTotal),
+      discountPercent: wholesaleDiscountPct,
+      discountAmount: totalDiscountAmount,
       status: order.orderStatus,
     });
   } catch (error: any) {
@@ -214,6 +294,11 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const session = await getAdminSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const orders = await prisma.order.findMany({
       take: 20,

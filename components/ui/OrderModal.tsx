@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   X,
   Plus,
@@ -17,11 +18,17 @@ import {
   Phone,
   Mail,
   ShieldCheck,
+  Trash2,
+  Tag,
+  PackageSearch,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { usePlateStore } from '@/store/usePlateStore';
 import { CustomerOrderData } from '@/types/plate';
 import { RIM_PATTERNS } from '@/constants/presets';
+import { calculatePlatePricing, getWholesaleDiscountPercent } from '@/lib/pricing';
+
+const STORE_WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_STORE_WHATSAPP || '6281100001111';
 
 export default function OrderModal() {
   const {
@@ -50,6 +57,10 @@ export default function OrderModal() {
     designOffsetX,
     designOffsetY,
     designOpacity,
+    cart,
+    updateCartItemQuantity,
+    removeCartItem,
+    clearCart,
   } = usePlateStore();
 
   const [formData, setFormData] = useState<CustomerOrderData>({
@@ -66,11 +77,42 @@ export default function OrderModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [orderId, setOrderId] = useState<string>('');
+  const [confirmedSummary, setConfirmedSummary] = useState<{ total: number; quantity: number } | null>(null);
   const [copiedId, setCopiedId] = useState(false);
 
   if (!isOrderModalOpen) return null;
 
-  const pricing = calculateTotalPrice();
+  const isCartCheckout = cart.length > 0;
+  const singlePricing = calculateTotalPrice();
+
+  // Compute cart totals if checking out multi-item cart
+  const cartBreakdown = isCartCheckout
+    ? (() => {
+        let totalQty = 0;
+        let subtotalBeforeDiscount = 0;
+        const itemPricings = cart.map((item) => {
+          const p = calculatePlatePricing({
+            unitBasePrice: item.selectedSize.basePrice,
+            hasDesign: Boolean(item.designUrl),
+            rimTrim: item.rimTrim,
+            rimPattern: item.rimPattern,
+            quantity: item.quantity,
+          });
+          totalQty += item.quantity;
+          subtotalBeforeDiscount += p.unitTotal * item.quantity;
+          return { item, p };
+        });
+        const discountPercent = getWholesaleDiscountPercent(totalQty);
+        const discountAmount = Math.round((subtotalBeforeDiscount * discountPercent) / 100);
+        const grandTotal = Math.max(0, subtotalBeforeDiscount - discountAmount);
+        return { itemPricings, totalQty, subtotalBeforeDiscount, discountPercent, discountAmount, grandTotal };
+      })()
+    : null;
+
+  const activeGrandTotal = cartBreakdown ? cartBreakdown.grandTotal : singlePricing.grandTotal;
+  const activeTotalQty = cartBreakdown ? cartBreakdown.totalQty : singlePricing.quantity;
+  const activeDiscountPercent = cartBreakdown ? cartBreakdown.discountPercent : singlePricing.discountPercent;
+  const activeDiscountAmount = cartBreakdown ? cartBreakdown.discountAmount : singlePricing.discountAmount;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -85,54 +127,120 @@ export default function OrderModal() {
 
     const fullAddress = `${formData.shippingAddress}, ${formData.city} ${formData.postalCode}`.trim();
 
-    const payload = {
-      customer: {
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        address: fullAddress,
-        notes: formData.specialNotes,
-      },
-      customization: {
-        plateSize: selectedSize.id,
-        plateSizeName: selectedSize.name,
-        diameterCm: selectedSize.diameterCm,
-        outerRadius: selectedSize.outerRadius,
-        wellRatio: selectedSize.wellRatio,
-        wellDepth: selectedSize.wellDepth,
-        rimHeight: selectedSize.rimHeight,
-        rimAngleDeg: selectedSize.rimAngleDeg,
-        thickness: selectedSize.thickness,
-        footRingRadiusRatio: selectedSize.footRingRadiusRatio,
-        plateColor: plateColor,
-        finish: plateFinish,
-        rimTrim: rimTrim,
-        rimTrimCustomColor: rimTrimCustomColor,
-        rimPattern: rimPattern,
-        customRimPatternUrl: customRimPatternUrl || null,
-        customRimPatternName: customRimPatternName || null,
-        customRimPatternRepeat: customRimPatternRepeat,
-        customRimPatternMode: customRimPatternMode,
-        printCoverage: printCoverage,
-        designImageUrl: designUrl || null,
-        designName: designName || 'Custom Artwork',
-        designScale: designScale,
-        designRotation: designRotation,
-        designOffsetX: designOffsetX,
-        designOffsetY: designOffsetY,
-        designOpacity: designOpacity,
-        snapshotUrl: capturedSnapshot || null,
-      },
-      pricing: {
-        unitBasePrice: pricing.unitBasePrice,
-        printFee: pricing.printFee,
-        rimTrimFee: pricing.rimTrimFee,
-        unitTotal: pricing.unitTotal,
-        quantity: pricing.quantity,
-        grandTotal: pricing.grandTotal,
-      },
-      paymentMethod: formData.paymentMethod,
-    };
+    const buildCustomizationPayload = (src: {
+      selectedSize: typeof selectedSize;
+      plateColor: string;
+      plateFinish: string;
+      rimTrim: string;
+      rimTrimCustomColor: string;
+      rimPattern: string;
+      customRimPatternUrl: string | null;
+      customRimPatternName: string | null;
+      customRimPatternRepeat: number;
+      customRimPatternMode: 'repeat' | 'full';
+      printCoverage: string;
+      logoPlacement: string;
+      designUrl: string | null;
+      designName: string | null;
+      designScale: number;
+      designRotation: number;
+      designOffsetX: number;
+      designOffsetY: number;
+      designOpacity: number;
+      snapshotUrl: string | null;
+    }) => ({
+      plateSize: src.selectedSize.id,
+      plateSizeName: src.selectedSize.name,
+      diameterCm: src.selectedSize.diameterCm,
+      outerRadius: src.selectedSize.outerRadius,
+      wellRatio: src.selectedSize.wellRatio,
+      wellDepth: src.selectedSize.wellDepth,
+      rimHeight: src.selectedSize.rimHeight,
+      rimAngleDeg: src.selectedSize.rimAngleDeg,
+      thickness: src.selectedSize.thickness,
+      footRingRadiusRatio: src.selectedSize.footRingRadiusRatio,
+      plateColor: src.plateColor,
+      finish: src.plateFinish,
+      rimTrim: src.rimTrim,
+      rimTrimCustomColor: src.rimTrimCustomColor,
+      rimPattern: src.rimPattern,
+      customRimPatternUrl: src.customRimPatternUrl || null,
+      customRimPatternName: src.customRimPatternName || null,
+      customRimPatternRepeat: src.customRimPatternRepeat,
+      customRimPatternMode: src.customRimPatternMode,
+      printCoverage: src.printCoverage,
+      logoPlacement: src.logoPlacement,
+      designImageUrl: src.designUrl || null,
+      designName: src.designName || 'Custom Artwork',
+      designScale: src.designScale,
+      designRotation: src.designRotation,
+      designOffsetX: src.designOffsetX,
+      designOffsetY: src.designOffsetY,
+      designOpacity: src.designOpacity,
+      snapshotUrl: src.snapshotUrl || null,
+    });
+
+    const payload = isCartCheckout
+      ? {
+          customer: {
+            name: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            address: fullAddress,
+            city: formData.city,
+            postalCode: formData.postalCode,
+            notes: formData.specialNotes,
+          },
+          items: cart.map((item) => ({
+            quantity: item.quantity,
+            customization: buildCustomizationPayload(item),
+          })),
+          paymentMethod: formData.paymentMethod,
+        }
+      : {
+          customer: {
+            name: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            address: fullAddress,
+            city: formData.city,
+            postalCode: formData.postalCode,
+            notes: formData.specialNotes,
+          },
+          customization: buildCustomizationPayload({
+            selectedSize,
+            plateColor,
+            plateFinish,
+            rimTrim,
+            rimTrimCustomColor,
+            rimPattern,
+            customRimPatternUrl,
+            customRimPatternName,
+            customRimPatternRepeat,
+            customRimPatternMode,
+            printCoverage,
+            logoPlacement,
+            designUrl,
+            designName,
+            designScale,
+            designRotation,
+            designOffsetX,
+            designOffsetY,
+            designOpacity,
+            snapshotUrl: capturedSnapshot,
+          }),
+          pricing: {
+            unitBasePrice: singlePricing.unitBasePrice,
+            printFee: singlePricing.printFee,
+            rimTrimFee: singlePricing.rimTrimFee,
+            rimPatternFee: singlePricing.rimPatternFee,
+            unitTotal: singlePricing.unitTotal,
+            quantity: singlePricing.quantity,
+            discountAmount: singlePricing.discountAmount,
+            grandTotal: singlePricing.grandTotal,
+          },
+          paymentMethod: formData.paymentMethod,
+        };
 
     try {
       const response = await fetch('/api/orders', {
@@ -146,6 +254,13 @@ export default function OrderModal() {
       if (response.ok && result.success) {
         setIsSubmitting(false);
         setOrderId(result.orderId);
+        setConfirmedSummary({
+          total: Number(result.totalPrice ?? activeGrandTotal),
+          quantity: activeTotalQty,
+        });
+        if (isCartCheckout) {
+          clearCart();
+        }
         setOrderCompleted(true);
 
         // Trigger celebratory confetti effect
@@ -260,7 +375,7 @@ export default function OrderModal() {
               <div className="flex items-center justify-between text-xs border-t border-zinc-200 dark:border-zinc-700/50 pt-2">
                 <span className="text-zinc-500">Total Pembayaran:</span>
                 <span className="font-bold text-zinc-900 dark:text-white">
-                  Rp {pricing.grandTotal.toLocaleString('id-ID')} ({pricing.quantity} pcs)
+                  Rp {(confirmedSummary?.total ?? activeGrandTotal).toLocaleString('id-ID')} ({confirmedSummary?.quantity ?? activeTotalQty} pcs)
                 </span>
               </div>
 
@@ -273,24 +388,33 @@ export default function OrderModal() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-lg mx-auto pt-2">
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(
-                  `Halo Admin Ceramix, saya ingin konfirmasi pesanan piring custom dengan ID: ${orderId} atas nama ${formData.fullName}`
+                href={`https://wa.me/${STORE_WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                  `Halo Admin Ceramix, saya ingin konfirmasi pesanan piring custom dengan ID: ${orderId} atas nama ${formData.fullName} (Total: Rp ${(confirmedSummary?.total ?? activeGrandTotal).toLocaleString('id-ID')})`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all"
               >
                 <ExternalLink className="w-4 h-4" />
-                Konfirmasi via WhatsApp
+                Konfirmasi WA
               </a>
+
+              <Link
+                href={`/track?order=${encodeURIComponent(orderId)}`}
+                onClick={handleClose}
+                className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all"
+              >
+                <PackageSearch className="w-4 h-4" />
+                Lacak & Upload Bukti
+              </Link>
 
               <button
                 onClick={handleClose}
-                className="w-full sm:flex-1 py-3 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-sm transition-colors"
+                className="w-full sm:w-auto py-3 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-sm transition-colors cursor-pointer"
               >
-                Buat Desain Lain
+                Tutup
               </button>
             </div>
           </div>
@@ -298,147 +422,267 @@ export default function OrderModal() {
           /* Normal Order Form View (2-Column Grid) */
           <form onSubmit={handleSubmitOrder} className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: 3D Snapshot & Spec Summary (5 cols) */}
+              {/* Left Column: Cart List OR Single 3D Snapshot & Spec Summary (5 cols) */}
               <div className="lg:col-span-5 space-y-4">
-                <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-zinc-700/70 flex items-center justify-center group shadow-inner">
-                  {capturedSnapshot ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={capturedSnapshot}
-                      alt="Hasil Custom Piring 3D"
-                      className="w-full h-full object-contain p-4 drop-shadow-2xl"
-                    />
-                  ) : (
-                    <div className="text-center p-4">
-                      <ShoppingBag className="w-12 h-12 text-zinc-400 mx-auto mb-2 opacity-50" />
-                      <p className="text-xs text-zinc-400">Snapshot piring sedang diproses...</p>
+                {isCartCheckout && cartBreakdown ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                        Keranjang Pesanan ({cart.length} Varian)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearCart}
+                        className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 cursor-pointer"
+                      >
+                        Kosongkan Keranjang
+                      </button>
                     </div>
-                  )}
-                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[10px] font-bold tracking-wider uppercase">
-                    3D Render Snapshot
-                  </div>
-                </div>
 
-                {/* Specs Pill List */}
-                <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-800 text-xs space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Tipe Piring:</span>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                      {selectedSize.name} ({selectedSize.diameterCm} cm)
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Finishing Glasir:</span>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 capitalize">
-                      {plateFinish}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-500">Aksen Pinggiran:</span>
-                    {rimTrim === 'custom' ? (
-                      <span className="flex items-center gap-1.5 font-semibold text-zinc-800 dark:text-zinc-200 text-xs">
-                        <span
-                          className="w-2.5 h-2.5 rounded-full border border-black/20"
-                          style={{ backgroundColor: rimTrimCustomColor }}
+                    <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                      {cartBreakdown.itemPricings.map(({ item, p }) => (
+                        <div
+                          key={item.id}
+                          className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/70 flex items-center gap-3"
+                        >
+                          <div className="w-14 h-14 rounded-lg bg-zinc-900 overflow-hidden shrink-0 flex items-center justify-center">
+                            {item.snapshotUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={item.snapshotUrl}
+                                alt={item.selectedSize.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <ShoppingBag className="w-5 h-5 text-zinc-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                              {item.selectedSize.name} ({item.selectedSize.diameterCm} cm)
+                            </p>
+                            <p className="text-[11px] text-zinc-500 truncate capitalize">
+                              {item.plateFinish} • {item.designName || 'Polos'}
+                            </p>
+                            <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                              Rp {(p.unitTotal * item.quantity).toLocaleString('id-ID')}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => removeCartItem(item.id)}
+                              className="text-zinc-400 hover:text-rose-500 cursor-pointer"
+                              title="Hapus varian"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                                className="w-5 h-5 rounded bg-white dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 flex items-center justify-center text-xs cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="w-6 text-center text-xs font-bold">{item.quantity}</span>
+                              <button
+                                type="button"
+                                onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                                className="w-5 h-5 rounded bg-white dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 flex items-center justify-center text-xs cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Cart Wholesale Total Card */}
+                    <div className="p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/40 space-y-2 text-xs">
+                      <div className="flex justify-between text-zinc-600 dark:text-zinc-300">
+                        <span>Total Piring ({activeTotalQty} pcs):</span>
+                        <span>Rp {cartBreakdown.subtotalBeforeDiscount.toLocaleString('id-ID')}</span>
+                      </div>
+                      {activeDiscountPercent > 0 ? (
+                        <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                          <span className="flex items-center gap-1">
+                            <Tag className="w-3.5 h-3.5" />
+                            Diskon Grosir ({activeDiscountPercent}%):
+                          </span>
+                          <span>-Rp {activeDiscountAmount.toLocaleString('id-ID')}</span>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-indigo-600/80 dark:text-indigo-300/80">
+                          💡 Pesan total ≥ 12 pcs untuk otomatis dapat diskon grosir hingga 35%.
+                        </p>
+                      )}
+                      <div className="flex justify-between items-baseline font-bold text-sm text-zinc-900 dark:text-white pt-2 border-t border-indigo-200/70 dark:border-indigo-900/70">
+                        <span>Total Estimasi:</span>
+                        <span className="text-base text-indigo-600 dark:text-indigo-400">
+                          Rp {activeGrandTotal.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-gradient-to-b from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-zinc-700/70 flex items-center justify-center group shadow-inner">
+                      {capturedSnapshot ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={capturedSnapshot}
+                          alt="Hasil Custom Piring 3D"
+                          className="w-full h-full object-contain p-4 drop-shadow-2xl"
                         />
-                        Custom ({rimTrimCustomColor.toUpperCase()})
-                      </span>
-                    ) : (
-                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 capitalize">
-                        {rimTrim}
-                      </span>
-                    )}
-                  </div>
-                  {rimPattern && rimPattern !== 'none' && (
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Motif Lis Bibir:</span>
-                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">
-                        {rimPattern === 'custom'
-                          ? customRimPatternName
-                            ? `${customRimPatternName} (${customRimPatternMode === 'repeat' ? `${customRimPatternRepeat}x` : 'Cincin'})`
-                            : 'Motif Kustom Pelanggan'
-                          : RIM_PATTERNS.find((p) => p.id === rimPattern)?.name || rimPattern}
-                      </span>
+                      ) : (
+                        <div className="text-center p-4">
+                          <ShoppingBag className="w-12 h-12 text-zinc-400 mx-auto mb-2 opacity-50" />
+                          <p className="text-xs text-zinc-400">Snapshot piring sedang diproses...</p>
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[10px] font-bold tracking-wider uppercase">
+                        3D Render Snapshot
+                      </div>
                     </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Motif Cetak:</span>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">
-                      {designName || 'Kustom Pelanggan'}
-                    </span>
-                  </div>
-                  {designUrl && (
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Posisi Logo:</span>
-                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 capitalize">
-                        {logoPlacement === 'top-rim'
-                          ? 'Bibir Jam 12'
-                          : logoPlacement === 'center'
-                          ? 'Di Tengah'
-                          : 'Bebas'}
-                      </span>
-                    </div>
-                  )}
-                </div>
 
-                {/* Quantity Controls & Total Calculation */}
-                <div className="p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/40 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                      Jumlah Piring:
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setOrderQuantity(orderQuantity - 1)}
-                        className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 transition-colors"
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="w-8 text-center font-bold text-sm">
-                        {orderQuantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setOrderQuantity(orderQuantity + 1)}
-                        className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
+                    {/* Specs Pill List */}
+                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-800 text-xs space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Tipe Piring:</span>
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                          {selectedSize.name} ({selectedSize.diameterCm} cm)
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Finishing Glasir:</span>
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200 capitalize">
+                          {plateFinish}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-500">Aksen Pinggiran:</span>
+                        {rimTrim === 'custom' ? (
+                          <span className="flex items-center gap-1.5 font-semibold text-zinc-800 dark:text-zinc-200 text-xs">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border border-black/20"
+                              style={{ backgroundColor: rimTrimCustomColor }}
+                            />
+                            Custom ({rimTrimCustomColor.toUpperCase()})
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-zinc-800 dark:text-zinc-200 capitalize">
+                            {rimTrim}
+                          </span>
+                        )}
+                      </div>
+                      {rimPattern && rimPattern !== 'none' && (
+                        <div className="flex justify-between">
+                          <span className="text-zinc-500">Motif Lis Bibir:</span>
+                          <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">
+                            {rimPattern === 'custom'
+                              ? customRimPatternName
+                                ? `${customRimPatternName} (${customRimPatternMode === 'repeat' ? `${customRimPatternRepeat}x` : 'Cincin'})`
+                                : 'Motif Kustom Pelanggan'
+                              : RIM_PATTERNS.find((p) => p.id === rimPattern)?.name || rimPattern}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-zinc-500">Motif Cetak:</span>
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">
+                          {designName || 'Kustom Pelanggan'}
+                        </span>
+                      </div>
+                      {designUrl && (
+                        <div className="flex justify-between">
+                          <span className="text-zinc-500">Posisi Logo:</span>
+                          <span className="font-semibold text-zinc-800 dark:text-zinc-200 capitalize">
+                            {logoPlacement === 'top-rim'
+                              ? 'Bibir Jam 12'
+                              : logoPlacement === 'center'
+                              ? 'Di Tengah'
+                              : 'Bebas'}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  <div className="border-t border-indigo-200/50 dark:border-indigo-900/50 pt-2 space-y-1 text-xs">
-                    <div className="flex justify-between text-zinc-500">
-                      <span>Harga Piring ({orderQuantity}x):</span>
-                      <span>Rp {(pricing.unitBasePrice * orderQuantity).toLocaleString('id-ID')}</span>
+                    {/* Quantity Controls & Total Calculation */}
+                    <div className="p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                          Jumlah Piring:
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setOrderQuantity(orderQuantity - 1)}
+                            className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 transition-colors cursor-pointer"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            value={orderQuantity}
+                            onChange={(e) => setOrderQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                            className="w-12 text-center font-bold text-sm bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg py-0.5"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setOrderQuantity(orderQuantity + 1)}
+                            className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 transition-colors cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-indigo-200/50 dark:border-indigo-900/50 pt-2 space-y-1 text-xs">
+                        <div className="flex justify-between text-zinc-500">
+                          <span>Harga Piring ({orderQuantity}x):</span>
+                          <span>Rp {(singlePricing.unitBasePrice * orderQuantity).toLocaleString('id-ID')}</span>
+                        </div>
+                        {singlePricing.printFee > 0 && (
+                          <div className="flex justify-between text-zinc-500">
+                            <span>Biaya Cetak Keramik:</span>
+                            <span>Rp {(singlePricing.printFee * orderQuantity).toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {singlePricing.rimTrimFee > 0 && (
+                          <div className="flex justify-between text-zinc-500">
+                            <span>Aksen Rim Metalik:</span>
+                            <span>Rp {(singlePricing.rimTrimFee * orderQuantity).toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {singlePricing.rimPatternFee > 0 && (
+                          <div className="flex justify-between text-zinc-500">
+                            <span>Motif Lis Bibir:</span>
+                            <span>Rp {(singlePricing.rimPatternFee * orderQuantity).toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {singlePricing.discountPercent > 0 ? (
+                          <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                            <span>Diskon Grosir ({singlePricing.discountPercent}%):</span>
+                            <span>-Rp {singlePricing.discountAmount.toLocaleString('id-ID')}</span>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-indigo-600/80 dark:text-indigo-300/80 pt-1">
+                            💡 Beli ≥12 pcs diskon 10% • ≥50 pcs diskon 20% • ≥100 pcs diskon 35%
+                          </p>
+                        )}
+                        <div className="flex justify-between items-baseline font-bold text-sm text-zinc-900 dark:text-white pt-2 border-t border-indigo-200/70 dark:border-indigo-900/70">
+                          <span>Total Estimasi:</span>
+                          <span className="text-base text-indigo-600 dark:text-indigo-400">
+                            Rp {singlePricing.grandTotal.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    {pricing.printFee > 0 && (
-                      <div className="flex justify-between text-zinc-500">
-                        <span>Biaya Cetak Keramik:</span>
-                        <span>Rp {(pricing.printFee * orderQuantity).toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
-                    {pricing.rimTrimFee > 0 && (
-                      <div className="flex justify-between text-zinc-500">
-                        <span>Aksen Rim Metalik:</span>
-                        <span>Rp {(pricing.rimTrimFee * orderQuantity).toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
-                    {pricing.rimPatternFee && pricing.rimPatternFee > 0 && (
-                      <div className="flex justify-between text-zinc-500">
-                        <span>Motif Lis Bibir:</span>
-                        <span>Rp {(pricing.rimPatternFee * orderQuantity).toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-baseline font-bold text-sm text-zinc-900 dark:text-white pt-2 border-t border-indigo-200/70 dark:border-indigo-900/70">
-                      <span>Total Estimasi:</span>
-                      <span className="text-base text-indigo-600 dark:text-indigo-400">
-                        Rp {pricing.grandTotal.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
 
               {/* Right Column: Customer Details Form (7 cols) */}
@@ -462,7 +706,7 @@ export default function OrderModal() {
                         type="text"
                         name="fullName"
                         required
-                        placeholder="Contoh: Dzul KEce-Bur"
+                        placeholder="Contoh: Budi Santoso"
                         value={formData.fullName}
                         onChange={handleInputChange}
                         className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -617,7 +861,7 @@ export default function OrderModal() {
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      <span>Konfirmasi & Buat Pesanan (Rp {pricing.grandTotal.toLocaleString('id-ID')})</span>
+                      <span>Konfirmasi & Buat Pesanan (Rp {activeGrandTotal.toLocaleString('id-ID')})</span>
                     </>
                   )}
                 </button>

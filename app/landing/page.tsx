@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -35,6 +35,22 @@ export default function LandingPage() {
   const [selectedPreviewTrim, setSelectedPreviewTrim] = useState<(typeof RIM_TRIMS)[number]>(RIM_TRIMS[1]); // 24K Gold
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [activeUseCase, setActiveUseCase] = useState<'restaurant' | 'wedding' | 'corporate' | 'cafe'>('restaurant');
+  const [cmsSettings, setCmsSettings] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    fetch('/api/master/landing')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.settings) {
+          setCmsSettings(data.settings);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const heroCms = cmsSettings['hero_section'];
+  const promoCms = cmsSettings['promo_banner'];
+  const kilnCms = cmsSettings['studio_announcement'];
 
   const faqs = [
     {
@@ -131,8 +147,14 @@ export default function LandingPage() {
             </a>
           </nav>
 
-          {/* Direct CTA Link to the 3D Studio */}
-          <div className="flex items-center gap-3">
+          {/* Direct CTA Link to the 3D Studio & Order Tracker */}
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/track"
+              className="hidden sm:inline-flex items-center gap-1.5 py-2.5 px-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 text-zinc-700 dark:text-zinc-200 font-bold text-xs shadow-xs transition-all"
+            >
+              Lacak Pesanan
+            </Link>
             <Link
               href="/"
               className="relative group py-2.5 px-5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 active:scale-95 transition-all flex items-center gap-2"
@@ -143,6 +165,29 @@ export default function LandingPage() {
           </div>
         </div>
       </header>
+
+      {/* Dynamic Kiln & Promo Bar from Admin CMS */}
+      {(promoCms || kilnCms) && (
+        <div className="bg-gradient-to-r from-indigo-950 via-zinc-900 to-indigo-950 text-white border-b border-indigo-500/20 px-4 py-2 text-xs">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {kilnCms?.title || 'Studio Kiln Online'}
+              </span>
+              <span className="text-zinc-300 truncate max-w-md">
+                {kilnCms?.content || 'Kapasitas pembakaran kiln normal (3-5 hari kerja).'}
+              </span>
+            </div>
+            {promoCms && (
+              <div className="flex items-center gap-2 text-amber-300 font-semibold">
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>{promoCms.title}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <main>
         {/* 2. Hero Section */}
@@ -158,18 +203,25 @@ export default function LandingPage() {
                 {/* Floating Badge */}
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-6">
                   <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Kustomisasi Piring Porselen 3D Real-Time Pertama di Indonesia</span>
+                  <span>{heroCms?.metadata?.badgeText || 'Kustomisasi Piring Porselen 3D Real-Time Pertama di Indonesia'}</span>
                 </div>
 
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] text-zinc-900 dark:text-white mb-6">
-                  Wujudkan Piring Porselen Eksklusif dengan{' '}
-                  <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-amber-500 bg-clip-text text-transparent">
-                    Visualisasi 3D Nyata
-                  </span>
+                  {heroCms?.title ? (
+                    heroCms.title
+                  ) : (
+                    <>
+                      Wujudkan Piring Porselen Eksklusif dengan{' '}
+                      <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-amber-500 bg-clip-text text-transparent">
+                        Visualisasi 3D Nyata
+                      </span>
+                    </>
+                  )}
                 </h1>
 
                 <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400 font-normal leading-relaxed mb-8 max-w-2xl">
-                  Rancang motif kustom, eksplorasi tekstur glasir keramik mewah, dan tambahkan aksen 24K gold rim trim. Putar 360° hingga ke dasar piring sebelum diproduksi. Sempurna untuk fine dining, souvenir pernikahan, dan koleksi prestisius.
+                  {heroCms?.content ||
+                    'Rancang motif kustom, eksplorasi tekstur glasir keramik mewah, dan tambahkan aksen 24K gold rim trim. Putar 360° hingga ke dasar piring sebelum diproduksi. Sempurna untuk fine dining, souvenir pernikahan, dan koleksi prestisius.'}
                 </p>
 
                 {/* Primary & Secondary Buttons */}
@@ -179,7 +231,7 @@ export default function LandingPage() {
                     className="py-4 px-8 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-base shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 active:scale-98 transition-all flex items-center justify-center gap-3 group"
                   >
                     <Sparkles className="w-5 h-5 text-amber-300" />
-                    <span>Mulai Kustomisasi 3D</span>
+                    <span>{heroCms?.metadata?.ctaText || 'Mulai Kustomisasi 3D'}</span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
                   </Link>
 

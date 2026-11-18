@@ -53,6 +53,7 @@ export interface CustomerDetailOrder {
   grandTotal: string;
   paymentMethod: string;
   paymentStatus: string;
+  paymentProofUrl?: string | null;
   orderStatus: string;
   trackingNumber: string | null;
   createdAt: string;
@@ -367,6 +368,29 @@ NO. ORDER: #${order.orderNumber}`;
               </div>
             </div>
           </div>
+
+          {/* Payment Proof Preview if Uploaded by Customer */}
+          {order.paymentProofUrl && (
+            <div className="bg-zinc-950/60 border border-emerald-500/30 rounded-2xl p-4 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-emerald-300">
+                <span className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <span>Bukti Pembayaran Pelanggan</span>
+                </span>
+                <span className="uppercase font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30">
+                  {order.paymentMethod} • {order.paymentStatus}
+                </span>
+              </div>
+              <div className="max-h-60 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={order.paymentProofUrl}
+                  alt="Bukti Transfer Pelanggan"
+                  className="max-h-56 object-contain rounded-lg"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Special Notes / Instruksi Khusus Pesanan */}
           <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl p-4">

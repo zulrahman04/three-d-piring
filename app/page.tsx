@@ -25,7 +25,7 @@ const PlateCanvas = dynamic(() => import('@/components/3d/PlateCanvas'), {
 
 export default function Home() {
   const captureFnRef = useRef<((width?: number, height?: number) => string) | null>(null);
-  const { setCapturedSnapshot, setOrderModalOpen } = usePlateStore();
+  const { setCapturedSnapshot, setOrderModalOpen, addToCart } = usePlateStore();
   const [mobileTab, setMobileTab] = useState<'canvas' | 'controls'>('canvas');
 
   // Callback to register the screenshot capture function from Canvas
@@ -47,6 +47,19 @@ export default function Home() {
       }
     }
     setOrderModalOpen(true);
+  };
+
+  // Capture a lightweight preview snapshot and add active plate design to multi-item cart
+  const handleAddToCart = () => {
+    let snapshot: string | null = null;
+    if (captureFnRef.current) {
+      try {
+        snapshot = captureFnRef.current(640, 640);
+      } catch (err) {
+        console.error('Error capturing cart thumbnail:', err);
+      }
+    }
+    addToCart(snapshot, 1);
   };
 
   // Direct download snapshot for user with customizable resolution (default 2048x2048 Ultra HD)
@@ -123,7 +136,7 @@ export default function Home() {
           id="customizer-panel"
           className="lg:col-span-5 xl:col-span-4 flex flex-col h-auto min-h-[550px]"
         >
-          <CustomizerPanel onCheckout={handleCheckout} />
+          <CustomizerPanel onCheckout={handleCheckout} onAddToCart={handleAddToCart} />
         </section>
       </main>
 
